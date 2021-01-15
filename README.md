@@ -6,9 +6,10 @@ This HOWTO contains instructions on how to build and configure a RUST validator 
 ## 1. System Requirements
 | Configuration | CPU (threads) | RAM (GiB) | Storage (GiB) | Network (Gbit/s)|
 |---|:---|:---|:---|:---|
-| Recommended |32|64|1000|1| 
+| Recommended |48|64|1000|1| 
 
-SSD/NVMe disks are recommended.
+SSD/NVMe disks are obligatory.
+
 ## 2. Prerequisites
 ### 2.1 Set the Environment
 Adjust (if needed) `rustnet.ton.dev/scripts/env.sh`
