@@ -40,7 +40,7 @@ function f_iscron() {
         } >>/etc/crontab
     fi
 
-    chmod +x ${TON_NODE_TOOLS_DIR}/validator_msig.sh
+    chmod +x ${TON_NODE_SCRIPTS_DIR}/validator_msig.sh
     pgrep cron >/dev/null || cron
 }
 
