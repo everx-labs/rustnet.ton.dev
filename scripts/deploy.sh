@@ -12,7 +12,7 @@ mkdir -p "${TMP_DIR}"
 
 set +eE
 
-cd "${DOCKER_COMPOSE_DIR}/ton-node/" && docker-compose stop
+cd "${DOCKER_COMPOSE_DIR}/ton-node/" && docker-compose down
 
 if [ "${CLEAN_HOST}" = "yes" ]; then
     docker system prune --all --force --volumes
@@ -53,6 +53,7 @@ else
     sed -i "s|NODE_CMD_2.*|NODE_CMD_2=novalidate|" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
 fi
 
+cd "${DOCKER_COMPOSE_DIR}/ton-node/" && docker-compose build --no-cache
 cd "${DOCKER_COMPOSE_DIR}/ton-node/" && docker-compose up -d
 docker ps -a
 docker exec --tty rnode "/ton-node/scripts/generate_console_config.sh"

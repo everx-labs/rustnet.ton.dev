@@ -34,13 +34,13 @@ COPY rust_install.sh /tmp/rust_install.sh
 RUN bash -c "/tmp/rust_install.sh 1.45.2"
 
 WORKDIR /tonlabs/ton-node
-RUN cargo build --release --features "metrics"
+RUN cargo update && cargo build --release --features "metrics"
 
 WORKDIR /tonlabs/ton-node/ton-labs-node-tools
-RUN cargo build --release
+RUN cargo update && cargo build --release
 
 WORKDIR /tonlabs/tonos-cli
-RUN cargo build --release
+RUN cargo update && cargo build --release
 
 FROM ubuntu:18.04
 
