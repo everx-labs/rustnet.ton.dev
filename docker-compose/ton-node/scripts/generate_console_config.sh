@@ -19,7 +19,7 @@ mkdir -p "${TMP_DIR}"
 cat "${TON_NODE_CONFIGS_DIR}/${HOSTNAME}_console_client_keys.json"
 jq -c .public "${TON_NODE_CONFIGS_DIR}/${HOSTNAME}_console_client_keys.json" >"${TON_NODE_CONFIGS_DIR}/console_client_public.json"
 
-jq ".control_server_ip_port = \"${RNODE_CONSOLE_SERVER_PORT}\"" "${TON_NODE_CONFIGS_DIR}/default_config.json" >"${TMP_DIR}/default_config.json.tmp"
+jq ".control_server_port = \"${RNODE_CONSOLE_SERVER_PORT}\"" "${TON_NODE_CONFIGS_DIR}/default_config.json" >"${TMP_DIR}/default_config.json.tmp"
 cp "${TMP_DIR}/default_config.json.tmp" "${TON_NODE_CONFIGS_DIR}/default_config.json"
 
 # Generate initial config.json
