@@ -1,6 +1,7 @@
 FROM ubuntu:18.04 as build
 
 COPY ton-node /tonlabs/ton-node/
+COPY ton-labs-node-tools /tonlabs/ton-labs-node-tools/
 COPY tonos-cli /tonlabs/tonos-cli
 
 # install deps
