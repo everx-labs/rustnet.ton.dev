@@ -47,20 +47,22 @@ BUILD_DATE: 2021-01-15 19:11:52 +0000
 COMMIT_DATE: 2021-01-15 16:26:58 +0300
 GIT_BRANCH: master
 {
-	"masterchainblocktime":	1610742179,
-	"masterchainblocknumber":	24191,
-	"timediff":	5,
-	"in_current_vset_p34":	false,
-	"in_next_vset_p36":	false
+  "masterchainblocktime": 1610742179,
+  "masterchainblocknumber": 24191,
+  "timediff": 5,
+  "in_current_vset_p34": false,
+  "in_next_vset_p36": false
 }
 ```
 If the `timediff` parameter equals a few seconds, synchronization is complete.
 
 ## 3 Configure validator multisignature wallet and depool
 
-- For direct staking validator it is necessary to create and deploy a validator multiginature wallet in `-1` chain and place 2 files on the validator node: `/ton-node/configs/${VALIDATOR_NAME}.addr` (validator multisignature wallet address in form `-1:XXX...XXX`) and `/ton-node/configs/keys/msig.keys.json` (validator multisignature custodian's keypair). If there are more than 1 custodian make sure each transactions sent by the validator are confirmed by required amount of custodians.
+- For direct staking validator it is necessary to create and deploy a validator [SafeMultisig](https://github.com/tonlabs/ton-labs-contracts/tree/master/solidity/safemultisig) wallet  in `-1` chain and place 2 files on the validator node: `/ton-node/configs/${VALIDATOR_NAME}.addr` (validator multisignature wallet address in form `-1:XXX...XXX`) and `/ton-node/configs/keys/msig.keys.json` (validator multisignature custodian's keypair). If there are more than 1 custodian make sure each transactions sent by the validator are confirmed by required amount of custodians.
   
   Documentation: [Multisignature Wallet Management in TONOS-CLI](https://docs.ton.dev/86757ecb2/p/94921e-multisignature-wallet-management-in-tonos-cli)
-- For a depool validator it is necessary to create and deploy a validator multiginature wallet in `0` chain, a depool in `0` chain and place 3 files on the validator node: `/ton-node/configs/${VALIDATOR_NAME}.addr` (validator multisignature wallet address in form `0:XXX...XXX`), `/ton-node/configs/keys/msig.keys.json` (validator multisignature custodian's keypair) and `/ton-node/configs/depool.addr` (depool address in form `0:XXX...XXX`)
+- For a depool validator it is necessary to create and deploy a validator [SafeMultisig](https://github.com/tonlabs/ton-labs-contracts/tree/master/solidity/safemultisig) wallet in `0` chain, a depool in `0` chain and place 3 files on the validator node: `/ton-node/configs/${VALIDATOR_NAME}.addr` (validator multisignature wallet address in form `0:XXX...XXX`), `/ton-node/configs/keys/msig.keys.json` (validator multisignature custodian's keypair) and `/ton-node/configs/depool.addr` (depool address in form `0:XXX...XXX`)
 
   Documentation: [Run DePool v3](https://docs.ton.dev/86757ecb2/p/04040b-run-depool-v3)
+
+The script generating validator election requests (directly through multisig wallet, or through depool, depending on the setting selected on step 2.1) will run regularly, once the necessary addresses and keys are provided.
