@@ -42,7 +42,6 @@ init_env() {
     T_FROM_START=$(($(date +%s) - $(stat -c %Y /proc)))
     if [ "${T_FROM_START}" -le 119 ]; then
         echo "INFO: Container started less then 120s ago. Only ${T_FROM_START} s passed."
-        echo "INFO: $(basename "$0") END $(date +%s) / $(date)"
         exit_and_clean 1 $LINENO
     fi
 
@@ -65,6 +64,9 @@ init_env() {
         KEYS_DIR="${CONFIGS_DIR}/keys"
         WORK_DIR="${UTILS_DIR}"
         MSIG_ADDR_FILE="${CONFIGS_DIR}/${VALIDATOR_NAME}.addr"
+        if [ "${DEPOOL_ENABLE}" = "yes" ]; then
+            DEPOOL_ADDR_FILE="${CONFIGS_DIR}/depool.addr"
+        fi
     else
         UTILS_DIR="/utils"
         KEYS_DIR="/keys"
@@ -75,6 +77,9 @@ init_env() {
         CRYPTO_LIBS="/crypto/lib:/crypto/smartcont"
         mkdir -p "${CONFIGS_DIR}"
         MSIG_ADDR_FILE="${KEYS_DIR}/${VALIDATOR_NAME}.addr"
+        if [ "${DEPOOL_ENABLE}" = "yes" ]; then
+            DEPOOL_ADDR_FILE="${KEYS_DIR}/depool.addr"
+        fi
     fi
 
     # Supported values: fift, solidity
@@ -99,14 +104,27 @@ check_env() {
         exit_and_clean 1 $LINENO
     fi
 
+    if [ "${DEPOOL_ENABLE}" = "yes" ] && [ ! -f "${DEPOOL_ADDR_FILE}" ]; then
+        echo "ERROR: ${DEPOOL_ADDR_FILE} does not exist"
+        exit_and_clean 1 $LINENO
+    fi
+
+    if [ "${DEPOOL_ENABLE}" = "yes" ]; then
+        DEPOOL_ADDR=$(cat "${KEYS_DIR}/depool.addr")
+
+        if [ -z "${DEPOOL_ADDR}" ]; then
+            echo "ERROR: DEPOOL_ADDR is empty"
+            exit_and_clean 1 $LINENO
+        fi
+
+        echo "INFO: DEPOOL_ADDR = ${DEPOOL_ADDR}"
+    fi
+
     if [ "${RUST_NET_ENABLE}" = "yes" ]; then
         if [ ! -f ${CONFIGS_DIR}/console.json ]; then
             echo "ERROR: ${CONFIGS_DIR}/console.json does not exist"
             exit_and_clean 1 $LINENO
         fi
-
-        jq ".wallet_id = \"${MSIG_ADDR}\"" ${CONFIGS_DIR}/console.json >"${TMP_DIR}/console.json"
-        cp "${TMP_DIR}/console.json" ${CONFIGS_DIR}/console.json
     fi
 
     if [ ! -f "${KEYS_DIR}/msig.keys.json" ]; then
@@ -124,7 +142,12 @@ check_env() {
     fi
 
     cd ${WORK_DIR}
-    ${UTILS_DIR}/tonos-cli config --url "${SDK_URL}" --retries "${TONOS_CLI_RETRIES}" >/dev/null 2>&1
+    if [ "${DEPOOL_ENABLE}" = "yes" ]; then
+        ${UTILS_DIR}/tonos-cli config --url "${SDK_URL}" --retries "${TONOS_CLI_RETRIES}" \
+            --addr "${DEPOOL_ADDR}" --wallet "${MSIG_ADDR}" --keys "${KEYS_DIR}/msig.keys.json"
+    else
+        ${UTILS_DIR}/tonos-cli config --url "${SDK_URL}" --retries "${TONOS_CLI_RETRIES}"
+    fi
 
     if [ "$DEBUG" = "yes" ]; then
         echo "DEBUG: ${WORK_DIR}/tonos-cli.conf.json BEGIN"
@@ -139,6 +162,11 @@ check_env() {
 }
 
 recover_stake() {
+    if [ "${DEPOOL_ENABLE}" = "yes" ]; then
+        echo "WARNING: recover_stake() is not applicable for depool validator"
+        return
+    fi
+
     MSIG_ADDR_HEX="0x$(echo "${MSIG_ADDR}" | cut -d ':' -f 2)"
 
     case ${ELECTOR_TYPE} in
@@ -225,24 +253,47 @@ prepare_for_elections() {
 
     if [ "${ACTIVE_ELECTION_ID}" = "0" ]; then
         date +"INFO: %F %T No current elections"
-        echo "INFO: $(basename "$0") END $(date +%s) / $(date)"
         exit_and_clean 0 $LINENO
     fi
 
     # Create ${ELECTIONS_WORK_DIR}/stop-election if you would like to forcibly stop validator script logic
     if [ -f "${ELECTIONS_WORK_DIR}/stop-election" ]; then
-        echo "INFO: $(basename "$0") END $(date +%s) / $(date)"
         exit_and_clean 0 $LINENO
     fi
 
     ELECTIONS_WORK_DIR="${KEYS_DIR}/elections/${ACTIVE_ELECTION_ID}"
     mkdir -p "${ELECTIONS_WORK_DIR}"
 
+    if [ "${DEPOOL_ENABLE}" = "yes" ]; then
+        "${UTILS_DIR}/tonos-cli" depool --addr "${DEPOOL_ADDR}" events >"${ELECTIONS_WORK_DIR}/events.txt" 2>&1
+
+        set +eE
+        set +o pipefail
+        ACTIVE_ELECTION_ID_FROM_DEPOOL_EVENT=$(grep "^{" "${ELECTIONS_WORK_DIR}/events.txt" | grep electionId |
+            jq ".electionId" | head -1 | tr -d '"' | xargs printf "%d\n")
+        echo "INFO: ACTIVE_ELECTION_ID_FROM_DEPOOL_EVENT = ${ACTIVE_ELECTION_ID_FROM_DEPOOL_EVENT}"
+
+        if [ "${ACTIVE_ELECTION_ID_FROM_DEPOOL_EVENT}" = "${ACTIVE_ELECTION_ID}" ]; then
+            PROXY_ADDR_FROM_DEPOOL_EVENT=$(grep "^{" "${ELECTIONS_WORK_DIR}/events.txt" | grep electionId |
+                jq ".proxy" | head -1 | tr -d '"')
+            echo "INFO: PROXY_ADDR_FROM_DEPOOL_EVENT = ${PROXY_ADDR_FROM_DEPOOL_EVENT}"
+            if [ -z "${PROXY_ADDR_FROM_DEPOOL_EVENT}" ]; then
+                echo "ERROR: unable to detect PROXY_ADDR_FROM_DEPOOL_EVENT"
+                exit_and_clean 1 $LINENO
+            fi
+        else
+            echo "ERROR: ACTIVE_ELECTION_ID_FROM_DEPOOL_EVENT (${ACTIVE_ELECTION_ID_FROM_DEPOOL_EVENT}) does not match to ACTIVE_ELECTION_ID (${ACTIVE_ELECTION_ID})"
+            echo "Verify '${UTILS_DIR}/tonos-cli depool --addr ${DEPOOL_ADDR} events' output"
+            exit_and_clean 1 $LINENO
+        fi
+        set -eE
+        set -o pipefail
+    fi
+
     if [ -f "${ELECTIONS_WORK_DIR}/active-election-id-submitted" ]; then
         ACTIVE_ELECTION_ID_SUBMITTED=$(cat "${ELECTIONS_WORK_DIR}/active-election-id-submitted")
         if [ "${ACTIVE_ELECTION_ID_SUBMITTED}" = "${ACTIVE_ELECTION_ID}" ]; then
             date +"INFO: %F %T Elections ${ACTIVE_ELECTION_ID} already submitted"
-            echo "INFO: $(basename "$0") END $(date +%s) / $(date)"
             exit_and_clean 0 $LINENO
         fi
     fi
@@ -270,10 +321,23 @@ create_elector_request() {
         # TODO: duration may be reduced - to be checked
         ELECTION_STOP=$((ACTIVE_ELECTION_ID + 1000 + ELECTIONS_START_BEFORE + ELECTIONS_END_BEFORE + STAKE_HELD_FOR + VALIDATORS_ELECTED_FOR))
 
+        if [ "${DEPOOL_ENABLE}" = "yes" ]; then
+            VALIDATOR_MSIG_ADDR="${PROXY_ADDR_FROM_DEPOOL_EVENT}"
+        else
+            VALIDATOR_MSIG_ADDR="${MSIG_ADDR}"
+        fi
+
         if [ "${RUST_NET_ENABLE}" = "yes" ]; then
+            jq ".wallet_id = \"${VALIDATOR_MSIG_ADDR}\"" ${CONFIGS_DIR}/console.json >"${TMP_DIR}/console.json"
+            cp "${TMP_DIR}/console.json" ${CONFIGS_DIR}/console.json
             ${UTILS_DIR}/console -C ${CONFIGS_DIR}/console.json -c "election-bid ${ELECTION_START} ${ELECTION_STOP}"
             mv validator-query.boc "${ELECTIONS_WORK_DIR}"
         else
+            if [ -f "${ELECTIONS_WORK_DIR}/${VALIDATOR_NAME}-election-key" ]; then
+                echo "ERROR: ${ELECTIONS_WORK_DIR}/${VALIDATOR_NAME}-election-key already exists"
+                exit_and_clean 1 $LINENO
+            fi
+
             "${TON_BUILD_DIR}/validator-engine-console/validator-engine-console" \
                 -k "${KEYS_DIR}/client" \
                 -p "${KEYS_DIR}/server.pub" \
@@ -286,6 +350,11 @@ create_elector_request() {
 
             if [ -z "${ELECTION_KEY}" ]; then
                 echo "ERROR: ELECTION_KEY is empty"
+                exit_and_clean 1 $LINENO
+            fi
+
+            if [ -f "${ELECTIONS_WORK_DIR}/${VALIDATOR_NAME}-election-adnl-key" ]; then
+                echo "ERROR: ${ELECTIONS_WORK_DIR}/${VALIDATOR_NAME}-election-adnl-key already exists"
                 exit_and_clean 1 $LINENO
             fi
 
@@ -316,7 +385,7 @@ create_elector_request() {
 
             "${TON_BUILD_DIR}/crypto/fift" \
                 -I ${CRYPTO_LIBS} \
-                -s validator-elect-req.fif "${MSIG_ADDR}" "${ELECTION_START}" "${MAX_FACTOR}" "${ELECTION_ADNL_KEY}" "${ELECTIONS_WORK_DIR}/validator-to-sign.bin" \
+                -s validator-elect-req.fif "${VALIDATOR_MSIG_ADDR}" "${ELECTION_START}" "${MAX_FACTOR}" "${ELECTION_ADNL_KEY}" "${ELECTIONS_WORK_DIR}/validator-to-sign.bin" \
                 &>"${ELECTIONS_WORK_DIR}/${VALIDATOR_NAME}-request-dump"
 
             REQUEST=$(sed --silent 2p "${ELECTIONS_WORK_DIR}/${VALIDATOR_NAME}-request-dump")
@@ -353,7 +422,7 @@ create_elector_request() {
 
             "${TON_BUILD_DIR}/crypto/fift" \
                 -I ${CRYPTO_LIBS} \
-                -s validator-elect-signed.fif "${MSIG_ADDR}" "${ELECTION_START}" "${MAX_FACTOR}" "${ELECTION_ADNL_KEY}" "${PUBLIC_KEY}" "${SIGNATURE}" "${ELECTIONS_WORK_DIR}/validator-query.boc" \
+                -s validator-elect-signed.fif "${VALIDATOR_MSIG_ADDR}" "${ELECTION_START}" "${MAX_FACTOR}" "${ELECTION_ADNL_KEY}" "${PUBLIC_KEY}" "${SIGNATURE}" "${ELECTIONS_WORK_DIR}/validator-query.boc" \
                 &>"${ELECTIONS_WORK_DIR}/${VALIDATOR_NAME}-request-dump2"
         fi
 
@@ -377,8 +446,8 @@ create_elector_request() {
 }
 
 submit_stake() {
-    VALIDATOR_ACTUAL_BALANCE=$(${UTILS_DIR}/tonos-cli account "${MSIG_ADDR}" | grep balance | awk '{print $2}') # in nano tokens
-    VALIDATOR_ACTUAL_BALANCE=$((VALIDATOR_ACTUAL_BALANCE / 1000000000))                                         # in tokens
+    VALIDATOR_ACTUAL_BALANCE_NANO=$(${UTILS_DIR}/tonos-cli account "${MSIG_ADDR}" | grep balance | awk '{print $2}') # in nano tokens
+    VALIDATOR_ACTUAL_BALANCE=$((VALIDATOR_ACTUAL_BALANCE_NANO / 1000000000))                                         # in tokens
     echo "INFO: ${MSIG_ADDR} VALIDATOR_ACTUAL_BALANCE = ${VALIDATOR_ACTUAL_BALANCE} tokens"
 
     if [ -z "${VALIDATOR_ACTUAL_BALANCE}" ]; then
@@ -386,71 +455,93 @@ submit_stake() {
         exit_and_clean 1 $LINENO
     fi
 
-    if [ -z "${STAKE}" ]; then
-        echo "INFO: dynamic staking mode"
-        if [ ! -f "${VALIDATOR_INIT_BALANCE_FILE}" ]; then
-            echo "${VALIDATOR_ACTUAL_BALANCE}" >"${VALIDATOR_INIT_BALANCE_FILE}"
-            # Split actual balance for 2 election cycles
-            STAKE=$(((VALIDATOR_ACTUAL_BALANCE - BALANCE_REMINDER) / 2))
+    if [ "${DEPOOL_ENABLE}" = "yes" ]; then
+        if [ "${VALIDATOR_ACTUAL_BALANCE_NANO}" -le 1000000000 ]; then
+            echo "ERROR: not enough tokens in ${MSIG_ADDR} wallet"
+            echo "INFO: VALIDATOR_ACTUAL_BALANCE_NANO = ${VALIDATOR_ACTUAL_BALANCE_NANO}"
+            exit_and_clean 1 $LINENO
+        fi
+
+        echo "INFO: tonos-cli submitTransaction attempt..."
+        set -x
+        if ! "${UTILS_DIR}/tonos-cli" call "${MSIG_ADDR}" submitTransaction \
+            "{\"dest\":\"${DEPOOL_ADDR}\",\"value\":\"1000000000\",\"bounce\":true,\"allBalance\":false,\"payload\":\"${VALIDATOR_QUERY_BOC}\"}" \
+            --abi "${CONFIGS_DIR}/SafeMultisigWallet.abi.json" \
+            --sign "${KEYS_DIR}/msig.keys.json"; then
+            echo "INFO: tonos-cli submitTransaction attempt... FAIL"
+            exit_and_clean 1 $LINENO
         else
-            if [ ${VALIDATOR_ACTUAL_BALANCE} = "$(cat "${VALIDATOR_INIT_BALANCE_FILE}")" ]; then
-                # 1st stake has not yet been submitted
+            echo "INFO: tonos-cli submitTransaction attempt... PASS"
+            date +"INFO: %F %T prepared for elections ${ACTIVE_ELECTION_ID}"
+            echo "${ACTIVE_ELECTION_ID}" >"${ELECTIONS_WORK_DIR}/active-election-id-submitted"
+        fi
+        set +x
+    else
+        if [ -z "${STAKE}" ]; then
+            echo "INFO: dynamic staking mode"
+            if [ ! -f "${VALIDATOR_INIT_BALANCE_FILE}" ]; then
+                echo "${VALIDATOR_ACTUAL_BALANCE}" >"${VALIDATOR_INIT_BALANCE_FILE}"
                 # Split actual balance for 2 election cycles
                 STAKE=$(((VALIDATOR_ACTUAL_BALANCE - BALANCE_REMINDER) / 2))
             else
-                # It is 2nd (and further) staking iteration - use all available tokens (except the reminder for fees)
-                STAKE=$((VALIDATOR_ACTUAL_BALANCE - BALANCE_REMINDER))
+                if [ ${VALIDATOR_ACTUAL_BALANCE} = "$(cat "${VALIDATOR_INIT_BALANCE_FILE}")" ]; then
+                    # 1st stake has not yet been submitted
+                    # Split actual balance for 2 election cycles
+                    STAKE=$(((VALIDATOR_ACTUAL_BALANCE - BALANCE_REMINDER) / 2))
+                else
+                    # It is 2nd (and further) staking iteration - use all available tokens (except the reminder for fees)
+                    STAKE=$((VALIDATOR_ACTUAL_BALANCE - BALANCE_REMINDER))
+                fi
             fi
+        else
+            echo "INFO: fixed staking mode"
         fi
-    else
-        echo "INFO: fixed staking mode"
+
+        echo "INFO: STAKE = $STAKE tokens"
+
+        if [ $STAKE -ge ${VALIDATOR_ACTUAL_BALANCE} ]; then
+            echo "ERROR: not enough tokens in ${MSIG_ADDR} wallet"
+            echo "INFO: VALIDATOR_ACTUAL_BALANCE = ${VALIDATOR_ACTUAL_BALANCE}"
+            exit_and_clean 1 $LINENO
+        fi
+
+        MIN_STAKE=$(${UTILS_DIR}/tonos-cli getconfig 17 | grep min_stake | awk '{print $2}' | tr -d '"' | tr -d ',') # in nanotokens
+        MIN_STAKE=$((MIN_STAKE / 1000000000))                                                                        # in tokens
+        echo "INFO: MIN_STAKE = ${MIN_STAKE} tokens"
+
+        if [ -z "${MIN_STAKE}" ]; then
+            echo "ERROR: MIN_STAKE is empty"
+            exit_and_clean 1 $LINENO
+        fi
+
+        if [ "$STAKE" -lt "${MIN_STAKE}" ]; then
+            echo "ERROR: STAKE ($STAKE tokens) is less than MIN_STAKE (${MIN_STAKE} tokens)"
+            exit_and_clean 1 $LINENO
+        fi
+
+        NANOSTAKE=$("${UTILS_DIR}/tonos-cli" convert tokens "$STAKE" | tail -1)
+        echo "INFO: NANOSTAKE = $NANOSTAKE nanotokens"
+
+        if [ -z "${NANOSTAKE}" ]; then
+            echo "ERROR: NANOSTAKE is empty"
+            exit_and_clean 1 $LINENO
+        fi
+
+        echo "INFO: tonos-cli submitTransaction attempt..."
+        set -x
+        if ! "${UTILS_DIR}/tonos-cli" call "${MSIG_ADDR}" submitTransaction \
+            "{\"dest\":\"${ELECTOR_ADDR}\",\"value\":\"${NANOSTAKE}\",\"bounce\":true,\"allBalance\":false,\"payload\":\"${VALIDATOR_QUERY_BOC}\"}" \
+            --abi "${CONFIGS_DIR}/SafeMultisigWallet.abi.json" \
+            --sign "${KEYS_DIR}/msig.keys.json"; then
+            echo "INFO: tonos-cli submitTransaction attempt... FAIL"
+            exit_and_clean 1 $LINENO
+        else
+            echo "INFO: tonos-cli submitTransaction attempt... PASS"
+            date +"INFO: %F %T prepared for elections ${ACTIVE_ELECTION_ID}"
+            echo "${ACTIVE_ELECTION_ID}" >"${ELECTIONS_WORK_DIR}/active-election-id-submitted"
+        fi
+        set +x
     fi
-
-    echo "INFO: STAKE = $STAKE tokens"
-
-    if [ $STAKE -ge ${VALIDATOR_ACTUAL_BALANCE} ]; then
-        echo "ERROR: not enough tokens in ${MSIG_ADDR} wallet"
-        echo "INFO: VALIDATOR_ACTUAL_BALANCE = ${VALIDATOR_ACTUAL_BALANCE}"
-        echo "INFO: $(basename "$0") END $(date +%s) / $(date)"
-        exit_and_clean 1 $LINENO
-    fi
-
-    MIN_STAKE=$(${UTILS_DIR}/tonos-cli getconfig 17 | grep min_stake | awk '{print $2}' | tr -d '"' | tr -d ',') # in nanotokens
-    MIN_STAKE=$((MIN_STAKE / 1000000000))                                                                        # in tokens
-    echo "INFO: MIN_STAKE = ${MIN_STAKE} tokens"
-
-    if [ -z "${MIN_STAKE}" ]; then
-        echo "ERROR: MIN_STAKE is empty"
-        exit_and_clean 1 $LINENO
-    fi
-
-    if [ "$STAKE" -lt "${MIN_STAKE}" ]; then
-        echo "ERROR: STAKE ($STAKE tokens) is less than MIN_STAKE (${MIN_STAKE} tokens)"
-        exit_and_clean 1 $LINENO
-    fi
-
-    NANOSTAKE=$("${UTILS_DIR}/tonos-cli" convert tokens "$STAKE" | tail -1)
-    echo "INFO: NANOSTAKE = $NANOSTAKE nanotokens"
-
-    if [ -z "${NANOSTAKE}" ]; then
-        echo "ERROR: NANOSTAKE is empty"
-        exit_and_clean 1 $LINENO
-    fi
-
-    echo "INFO: tonos-cli submitTransaction attempt..."
-    set -x
-    if ! "${UTILS_DIR}/tonos-cli" call "${MSIG_ADDR}" submitTransaction \
-        "{\"dest\":\"${ELECTOR_ADDR}\",\"value\":\"${NANOSTAKE}\",\"bounce\":true,\"allBalance\":false,\"payload\":\"${VALIDATOR_QUERY_BOC}\"}" \
-        --abi "${CONFIGS_DIR}/SafeMultisigWallet.abi.json" \
-        --sign "${KEYS_DIR}/msig.keys.json"; then
-        echo "INFO: tonos-cli submitTransaction attempt... FAIL"
-        exit_and_clean 1 $LINENO
-    else
-        echo "INFO: tonos-cli submitTransaction attempt... PASS"
-        date +"INFO: %F %T prepared for elections ${ACTIVE_ELECTION_ID}"
-        echo "${ACTIVE_ELECTION_ID}" >"${ELECTIONS_WORK_DIR}/active-election-id-submitted"
-    fi
-    set +x
 }
 
 #==============================================================================
@@ -458,7 +549,9 @@ submit_stake() {
 #==============================================================================
 init_env
 check_env
-recover_stake
+if [ "${DEPOOL_ENABLE}" != "yes" ]; then
+    recover_stake
+fi
 prepare_for_elections
 create_elector_request
 submit_stake

@@ -46,11 +46,12 @@ cd "${DOCKER_COMPOSE_DIR}/ton-node/build/tonos-cli" && git checkout "${TONOS_CLI
 rm -f "${DOCKER_COMPOSE_DIR}/ton-node/configs/SafeMultisigWallet.abi.json"
 cd "${DOCKER_COMPOSE_DIR}/ton-node/configs"
 
-sed -i "s|NODE_CMD_1.*|NODE_CMD_1=bash|g" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
+sed -i "s|DEPOOL_ENABLE=.*|DEPOOL_ENABLE=${DEPOOL_ENABLE}|g" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
+sed -i "s|NODE_CMD_1=.*|NODE_CMD_1=bash|g" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
 if [ "${ENABLE_VALIDATE}" = "yes" ]; then
-    sed -i "s|NODE_CMD_2.*|NODE_CMD_2=validate|" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
+    sed -i "s|NODE_CMD_2=.*|NODE_CMD_2=validate|" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
 else
-    sed -i "s|NODE_CMD_2.*|NODE_CMD_2=novalidate|" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
+    sed -i "s|NODE_CMD_2=.*|NODE_CMD_2=novalidate|" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
 fi
 
 cd "${DOCKER_COMPOSE_DIR}/ton-node/" && docker-compose build --no-cache
