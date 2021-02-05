@@ -36,7 +36,7 @@ RUN bash -c "/tmp/rust_install.sh 1.45.2"
 WORKDIR /tonlabs/ton-node
 RUN cargo update && cargo build --release --features "metrics"
 
-WORKDIR /tonlabs/ton-node/ton-labs-node-tools
+WORKDIR /tonlabs/ton-labs-node-tools
 RUN cargo update && cargo build --release
 
 WORKDIR /tonlabs/tonos-cli
@@ -70,6 +70,6 @@ RUN bash -c "/tmp/rust_install.sh 1.45.2"
 
 RUN mkdir -p /ton-node/tools
 COPY --from=build /tonlabs/ton-node/target/release/ton_node /ton-node/ton_node_no_kafka
-COPY --from=build /tonlabs/ton-node/ton-labs-node-tools/target/release/console /ton-node/tools/
-COPY --from=build /tonlabs/ton-node/ton-labs-node-tools/target/release/keygen /ton-node/tools/
+COPY --from=build /tonlabs/ton-labs-node-tools/target/release/console /ton-node/tools/
+COPY --from=build /tonlabs/ton-labs-node-tools/target/release/keygen /ton-node/tools/
 COPY --from=build /tonlabs/tonos-cli/target/release/tonos-cli /ton-node/tools/
