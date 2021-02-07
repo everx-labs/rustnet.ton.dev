@@ -1,10 +1,9 @@
 #!/bin/bash -eEx
 
-export TON_NODE_ROOT_DIR="/ton-node"
-export TON_NODE_CONFIGS_DIR="${TON_NODE_ROOT_DIR}/configs"
-export TON_NODE_TOOLS_DIR="${TON_NODE_ROOT_DIR}/tools"
-export TON_NODE_SCRIPTS_DIR="${TON_NODE_ROOT_DIR}/scripts"
-export TON_NODE_LOGS_DIR="${TON_NODE_ROOT_DIR}/logs"
+TON_NODE_ROOT_DIR="/ton-node"
+TON_NODE_CONFIGS_DIR="${TON_NODE_ROOT_DIR}/configs"
+TON_NODE_SCRIPTS_DIR="${TON_NODE_ROOT_DIR}/scripts"
+TON_NODE_LOGS_DIR="${TON_NODE_ROOT_DIR}/logs"
 
 echo "INFO: R-Node startup..."
 
@@ -27,31 +26,41 @@ function f_get_ton_global_config_json() {
 }
 
 function f_iscron() {
-    apt update && apt install -y cron
-
-    if ! grep "validator_msig\|validator_depool" /etc/crontab >/dev/null 2>&1; then
+    if ! grep "validator.sh" /etc/crontab >/dev/null 2>&1; then
         {
             echo "RUST_NET_ENABLE=yes"
-            echo "STAKE=$STAKE"
             echo "VALIDATOR_NAME=${VALIDATOR_NAME}"
             echo "SDK_URL=${SDK_URL}"
             echo "ELECTOR_TYPE=${ELECTOR_TYPE}"
-            echo "@hourly  root  ${TON_NODE_SCRIPTS_DIR}/validator_msig.sh \${STAKE} >>${TON_NODE_LOGS_DIR}/validator_msig.log 2>&1"
         } >>/etc/crontab
+        if [ "${DEPOOL_ENABLE}" = "yes" ]; then
+            {
+                echo "DEPOOL_ENABLE=yes"
+                echo "*/10 * * * *    root  ${TON_NODE_SCRIPTS_DIR}/send_depool_tick_tock.sh >>${TON_NODE_LOGS_DIR}/send_depool_tick_tock.log 2>&1"
+                echo "*/5 * * * *     root  ${TON_NODE_SCRIPTS_DIR}/validator.sh >>${TON_NODE_LOGS_DIR}/validator.log 2>&1"
+            } >>/etc/crontab
+        else
+            {
+                echo "STAKE=$STAKE"
+                echo "*/5 * * * *  root  ${TON_NODE_SCRIPTS_DIR}/validator.sh \${STAKE} >>${TON_NODE_LOGS_DIR}/validator.log 2>&1"
+            } >>/etc/crontab
+        fi
     fi
 
-    chmod +x ${TON_NODE_SCRIPTS_DIR}/validator_msig.sh
+    chmod +x ${TON_NODE_SCRIPTS_DIR}/validator.sh
     pgrep cron >/dev/null || cron
 }
 
 # main
+apt update && apt install -y cron jq wget
+[ "$2" = "validate" ] && f_iscron
 f_get_ton_global_config_json
 
 if [ "$1" = "bash" ]; then
     tail -f /dev/null
 else
-    [ "$2" = "validate" ] && f_iscron
     cd ${TON_NODE_ROOT_DIR}
     # shellcheck disable=SC2086
-    exec $NODE_EXEC --configs "${CONFIGS_PATH}" ${TON_NODE_EXTRA_ARGS} >>${TON_NODE_LOGS_DIR}/output.log 2>&1
+    exec $NODE_EXEC --configs "${CONFIGS_PATH}" ${TON_NODE_EXTRA_ARGS} >>${TON_NODE_LOGS_DIR}/stdout.log \
+        2>>${TON_NODE_LOGS_DIR}/stderr.log
 fi

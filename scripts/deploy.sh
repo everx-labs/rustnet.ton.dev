@@ -36,8 +36,9 @@ rm -rf "${DOCKER_COMPOSE_DIR}/ton-node/build/ton-node"
 cd "${DOCKER_COMPOSE_DIR}/ton-node/build" && git clone --recursive "${TON_NODE_GITHUB_REPO}" ton-node
 cd "${DOCKER_COMPOSE_DIR}/ton-node/build/ton-node" && git checkout "${TON_NODE_GITHUB_COMMIT_ID}"
 
-cd "${DOCKER_COMPOSE_DIR}/ton-node/build/ton-node" && git clone --recursive "${TON_NODE_TOOLS_GITHUB_REPO}"
-cd "${DOCKER_COMPOSE_DIR}/ton-node/build/ton-node/ton-labs-node-tools" && git checkout "${TON_NODE_TOOLS_GITHUB_COMMIT_ID}"
+rm -rf "${DOCKER_COMPOSE_DIR}/ton-node/build/ton-labs-node-tools"
+cd "${DOCKER_COMPOSE_DIR}/ton-node/build" && git clone --recursive "${TON_NODE_TOOLS_GITHUB_REPO}"
+cd "${DOCKER_COMPOSE_DIR}/ton-node/build/ton-labs-node-tools" && git checkout "${TON_NODE_TOOLS_GITHUB_COMMIT_ID}"
 
 rm -rf "${DOCKER_COMPOSE_DIR}/ton-node/build/tonos-cli"
 cd "${DOCKER_COMPOSE_DIR}/ton-node/build" && git clone --recursive "${TONOS_CLI_GITHUB_REPO}"
@@ -46,11 +47,12 @@ cd "${DOCKER_COMPOSE_DIR}/ton-node/build/tonos-cli" && git checkout "${TONOS_CLI
 rm -f "${DOCKER_COMPOSE_DIR}/ton-node/configs/SafeMultisigWallet.abi.json"
 cd "${DOCKER_COMPOSE_DIR}/ton-node/configs"
 
-sed -i "s|NODE_CMD_1.*|NODE_CMD_1=bash|g" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
+sed -i "s|DEPOOL_ENABLE=.*|DEPOOL_ENABLE=${DEPOOL_ENABLE}|g" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
+sed -i "s|NODE_CMD_1=.*|NODE_CMD_1=bash|g" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
 if [ "${ENABLE_VALIDATE}" = "yes" ]; then
-    sed -i "s|NODE_CMD_2.*|NODE_CMD_2=validate|" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
+    sed -i "s|NODE_CMD_2=.*|NODE_CMD_2=validate|" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
 else
-    sed -i "s|NODE_CMD_2.*|NODE_CMD_2=novalidate|" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
+    sed -i "s|NODE_CMD_2=.*|NODE_CMD_2=novalidate|" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
 fi
 
 cd "${DOCKER_COMPOSE_DIR}/ton-node/" && docker-compose build --no-cache

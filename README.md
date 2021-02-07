@@ -13,6 +13,10 @@ SSD/NVMe disks are obligatory.
 ## 2. Prerequisites
 ### 2.1 Set the Environment
 Adjust (if needed) `rustnet.ton.dev/scripts/env.sh`
+
+Set `export DEPOOL_ENABLE=yes` in `env.sh` for a depool validator (an elector request is sent to a depool from a validator multisignature wallet).
+
+Set `export DEPOOL_ENABLE=no` in `env.sh` for a direct staking validator (an elector request is sent from a multisignature wallet directly to the elector).
     
     cd rustnet.ton.dev/scripts/
     . ./env.sh 
@@ -43,36 +47,22 @@ BUILD_DATE: 2021-01-15 19:11:52 +0000
 COMMIT_DATE: 2021-01-15 16:26:58 +0300
 GIT_BRANCH: master
 {
-	"masterchainblocktime":	1610742179,
-	"masterchainblocknumber":	24191,
-	"timediff":	5,
-	"in_current_vset_p34":	false,
-	"in_next_vset_p36":	false
+  "masterchainblocktime": 1610742179,
+  "masterchainblocknumber": 24191,
+  "timediff": 5,
+  "in_current_vset_p34": false,
+  "in_next_vset_p36": false
 }
 ```
 If the `timediff` parameter equals a few seconds, synchronization is complete.
 
-## 3 Initialize multisignature wallet
+## 3 Configure validator multisignature wallet and depool
 
-### 3.1 Prepare Multisignature Wallet
-**Note**: All manual calls of the TONOS-CLI utility should be performed from the `/ton-node/tools` folder in the `rnode` docker container.
+- For direct staking validator it is necessary to create and deploy a validator [SafeMultisig](https://github.com/tonlabs/ton-labs-contracts/tree/master/solidity/safemultisig) wallet  in `-1` chain and place 2 files on the validator node: `/ton-node/configs/${VALIDATOR_NAME}.addr` (validator multisignature wallet address in form `-1:XXX...XXX`) and `/ton-node/configs/keys/msig.keys.json` (validator multisignature custodian's keypair). If there are more than 1 custodian make sure each transactions sent by the validator are confirmed by required amount of custodians.
+  
+  Documentation: [Multisignature Wallet Management in TONOS-CLI](https://docs.ton.dev/86757ecb2/p/94921e-multisignature-wallet-management-in-tonos-cli)
+- For a depool validator it is necessary to create and deploy a validator [SafeMultisig](https://github.com/tonlabs/ton-labs-contracts/tree/master/solidity/safemultisig) wallet in `0` chain, a depool in `0` chain and place 3 files on the validator node: `/ton-node/configs/${VALIDATOR_NAME}.addr` (validator multisignature wallet address in form `0:XXX...XXX`), `/ton-node/configs/keys/msig.keys.json` (validator multisignature custodian's keypair) and `/ton-node/configs/depool.addr` (depool address in form `0:XXX...XXX`)
 
-Multisignature wallet (or just wallet) is used in validator script to send election requests to the Elector smart contract.
+  Documentation: [Run DePool v3](https://docs.ton.dev/86757ecb2/p/04040b-run-depool-v3)
 
-Let `N` be the total number of wallet custodians and `K` the number of minimal confirmations required to execute a wallet transaction.
-
-1. Read [TONOS-CLI documentation](https://docs.ton.dev/86757ecb2/v/0/p/94921e-running-tonos-cli-with-tails-os-and-working-with-multisignature-wallet) (*Deploying Multisignature Wallet to TON blockchain*) and generate seed phrases and public keys for `N - 1`  custodians.
-2. Generate wallet address and `Nth` custodian key:
-```
-    docker exec -it rnode /ton-node/scripts/msig_genaddr.sh
-```
-Script creates 2 files: `/ton-node/configs/${VALIDATOR_NAME}.addr` and `/ton-node/configs/keys/msig.keys.json`. 
-Use public key from `msig.keys.json` as `Nth` custodian public key when you will deploy the wallet.
-
-### 3.2 Initialize multisignature wallet
-
-**Note**: All manual calls of the TONOS-CLI utility should be performed from the `/ton-node/tools` folder in the `rnode` docker container.
-
-
-Gather all custodians' public keys and deploy wallet using [TONOS-CLI](https://docs.ton.dev/86757ecb2/v/0/p/94921e-running-tonos-cli-with-tails-os-and-working-with-multisignature-wallet) (lookup Deploying Multisignature Wallet to TON blockchain in the document above). Use `K` value as `reqConfirms` deploy parameter.
-Make sure that the wallet was deployed at the address saved in `$(hostname -s).addr` file.
+The script generating validator election requests (directly through multisig wallet, or through depool, depending on the setting selected on step 2.1) will run regularly, once the necessary addresses and keys are provided.

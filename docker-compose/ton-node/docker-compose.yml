@@ -20,7 +20,8 @@ services:
       TON_NODE_ENABLE_KAFKA:
       RUST_NET_ENABLE:
       ELECTOR_TYPE:
-#      SSH_AUTH_SOCK: /ssh-agent
+      DEPOOL_ENABLE:
+      #SSH_AUTH_SOCK: /ssh-agent
     ports:
       - "${ADNL_PORT}:${ADNL_PORT}/udp"
     networks:
@@ -31,7 +32,7 @@ services:
       - ./logs/:/ton-node/logs/
       - DB:/ton-node/node_db/
       - /tmp/metrics/:/tmp/metrics/
-#      - ${SSH_AUTH_SOCK}:/ssh-agent
+      #- ${SSH_AUTH_SOCK}:/ssh-agent
     entrypoint: /ton-node/scripts/entrypoint.sh
     command: ["${NODE_CMD_1}", "${NODE_CMD_2}"]
     mem_limit: "${MEM_LIMIT}"
@@ -44,7 +45,6 @@ services:
       - SYS_PTRACE
     extra_hosts:
       - "parser.service:127.0.0.1"
-
 networks:
   proxy_nw:
     external: true
