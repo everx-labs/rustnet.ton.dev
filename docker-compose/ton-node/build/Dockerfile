@@ -32,7 +32,7 @@ RUN curl https://packages.confluent.io/deb/5.5/archive.key | apt-key add;\
 
 # Get Rust
 COPY rust_install.sh /tmp/rust_install.sh
-RUN bash -c "/tmp/rust_install.sh 1.50.0"
+RUN bash -c "/tmp/rust_install.sh 1.49.0"
 
 WORKDIR /tonlabs/ton-node
 RUN cargo update && cargo build --release --features "metrics"
@@ -67,7 +67,7 @@ RUN apt-get update && apt-get install -y \
 
 # Get Rust
 COPY rust_install.sh /tmp/rust_install.sh
-RUN bash -c "/tmp/rust_install.sh 1.50.0"
+RUN bash -c "/tmp/rust_install.sh 1.49.0"
 
 RUN mkdir -p /ton-node/tools
 COPY --from=build /tonlabs/ton-node/target/release/ton_node /ton-node/ton_node_no_kafka
