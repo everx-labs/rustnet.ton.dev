@@ -110,7 +110,7 @@ check_env() {
     fi
 
     if [ "${DEPOOL_ENABLE}" = "yes" ]; then
-        DEPOOL_ADDR=$(cat "${KEYS_DIR}/depool.addr")
+        DEPOOL_ADDR=$(cat "${DEPOOL_ADDR_FILE}")
 
         if [ -z "${DEPOOL_ADDR}" ]; then
             echo "ERROR: DEPOOL_ADDR is empty"

@@ -36,6 +36,7 @@ RUN curl https://packages.confluent.io/deb/5.5/archive.key | apt-key add;\
 
 # Get Rust
 COPY rust_install.sh /tmp/rust_install.sh
+
 RUN bash -c "/tmp/rust_install.sh ${RUST_VERSION}"
 
 WORKDIR /tonlabs/ton-node
@@ -73,6 +74,7 @@ RUN apt-get update && apt-get install -y \
 
 # Get Rust
 COPY rust_install.sh /tmp/rust_install.sh
+
 RUN bash -c "/tmp/rust_install.sh ${RUST_VERSION}"
 
 RUN mkdir -p /ton-node/tools
