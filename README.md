@@ -31,7 +31,7 @@ Install and configure Docker according to the [official documentation](https://d
 Do this step when the network is launched.
 Deploy the node:
 
-    ./deploy.sh
+    ./deploy.sh 2>&1 | tee ./deploy.log
   
 Wait until the node is synced with the masterchain. Depending on network throughput this step may take significant time (up to several hours).
 
