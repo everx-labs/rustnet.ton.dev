@@ -6,7 +6,7 @@ appenders:
   stdout:
     kind: console
     encoder:
-      pattern: "{d(%s.%f)} {l} [{h({t})}] {I}: {m}{n}"
+      pattern: "{d(%Y-%m-%d %H:%M:%S.%f)} {l} [{h({t})}] {I}: {m}{n}"
 
   stdout_ref:
     kind: console
@@ -17,7 +17,7 @@ appenders:
     kind: file
     path: "/ton-node/logs/output.log"
     encoder:
-      pattern: "{d(%s.%f)} {l} [{h({t})}] {I}: {m}{n}"
+      pattern: "{d(%Y-%m-%d %H:%M:%S.%f)} {l} [{h({t})}] {I}: {m}{n}"
 
   rolling_logfile:
     kind: rolling_file
@@ -28,66 +28,60 @@ appenders:
       kind: compound
       trigger:
         kind: size
-        limit: 50 gb
+        limit: 100 gb
       roller:
         kind: fixed_window
         pattern: '/ton-node/logs/output_{}.log'
         base: 1
         count: 1
 
-  tvm_logfile:
-    kind: file
-    path: "target/log/tvm.log"
-    encoder:
-      pattern: "{m}{n}"
-
 root:
-  level: info
+  level: error
   appenders:
     - rolling_logfile
 
 loggers:
   # node messages
   ton_node:
-    level: trace
+    level: info
   boot:
-    level: trace
+    level: info
   sync:
-    level: trace
+    level: info
 
   # adnl messages
   adnl:
-    level: info
+    level: error
 
   overlay:
-    level: info
+    level: error
 
   rldp:
-    level: info
+    level: error
 
   dht:
-    level: info
+    level: error
 
   # block messages
   ton_block:
-    level: debug
+    level: off
 
   # block messages
   executor:
-    level: debug
+    level: off
 
   # tvm messages
   tvm:
-    level: info
+    level: off
 
   librdkafka:
-    level: info
+    level: error
 
   validator:
-    level: debug
+    level: info
 
   catchain:
-    level: debug
+    level: info
 
   validator_session:
-    level: debug
+    level: info
