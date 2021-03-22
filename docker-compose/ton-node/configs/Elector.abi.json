@@ -98,6 +98,7 @@
 			"inputs": [
 			],
 			"outputs": [
+				{"name":"version","type":"uint8"},
 				{"name":"election_open","type":"bool"},
 				{"components":[{"name":"elect_at","type":"uint32"},{"name":"elect_close","type":"uint32"},{"name":"min_stake","type":"uint128"},{"name":"total_stake","type":"uint128"},{"components":[{"name":"stake","type":"uint128"},{"name":"time","type":"uint32"},{"name":"max_factor","type":"uint32"},{"name":"addr","type":"uint256"},{"name":"adnl_addr","type":"uint256"}],"name":"members","type":"map(uint256,tuple)"},{"name":"failed","type":"bool"},{"name":"finished","type":"bool"}],"name":"cur_elect","type":"tuple"},
 				{"name":"credits","type":"map(uint256,uint128)"},
@@ -129,22 +130,5 @@
 	"data": [
 	],
 	"events": [
-		{
-			"name": "LogEvent",
-			"inputs": [
-				{"name":"comment","type":"bytes"}
-			],
-			"outputs": [
-			]
-		},
-		{
-			"name": "CreditToEvent",
-			"inputs": [
-				{"name":"addr","type":"uint256"},
-				{"name":"amount","type":"uint128"}
-			],
-			"outputs": [
-			]
-		}
 	]
 }
