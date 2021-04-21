@@ -19,10 +19,12 @@ cd ${WORK_DIR}
 
 case ${ELECTOR_TYPE} in
 "fift")
-    ACTIVE_ELECTION_ID_HEX=$(${UTILS_DIR}/tonos-cli runget ${ELECTOR_ADDR} active_election_id 2>&1 | grep "Result:" | awk -F'"' '{print $2}')
+    TONOS_CLI_OUTPUT=$(${UTILS_DIR}/tonos-cli runget ${ELECTOR_ADDR} active_election_id 2>&1)
+    ACTIVE_ELECTION_ID_HEX=$(echo "${TONOS_CLI_OUTPUT}" | grep "Result:" | awk -F'"' '{print $2}')
     ;;
 "solidity")
-    ACTIVE_ELECTION_ID_HEX=$(${UTILS_DIR}/tonos-cli run ${ELECTOR_ADDR} active_election_id {} --abi ${CONFIGS_DIR}/Elector.abi.json 2>&1 | grep "value0" | awk '{print $2}' | tr -d '"')
+    TONOS_CLI_OUTPUT=$(${UTILS_DIR}/tonos-cli run ${ELECTOR_ADDR} active_election_id {} --abi ${CONFIGS_DIR}/Elector.abi.json 2>&1)
+    ACTIVE_ELECTION_ID_HEX=$(echo "${TONOS_CLI_OUTPUT}" | grep "value0" | awk '{print $2}' | tr -d '"')
     ;;
 *)
     echo "ERROR: unknown ELECTOR_TYPE (${ELECTOR_TYPE})"
@@ -46,7 +48,7 @@ fi
 ELECTIONS_WORK_DIR="${KEYS_DIR}/elections/${ACTIVE_ELECTION_ID}"
 
 if [ ! -f "${ELECTIONS_WORK_DIR}/depool-tick-tock-submitted" ]; then
-    if ${UTILS_DIR}/tonos-cli depool ticktock; then
+    if ${UTILS_DIR}/tonos-cli depool --no-answer ticktock; then
         echo "${ACTIVE_ELECTION_ID}" >"${ELECTIONS_WORK_DIR}/depool-tick-tock-submitted"
     else
         echo "ERROR: 'tonos-cli depool ticktock' failed"
