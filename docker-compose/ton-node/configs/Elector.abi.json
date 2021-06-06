@@ -42,8 +42,33 @@
 			]
 		},
 		{
+			"name": "config_slash_confirmed_ok",
+			"id": "0xEE764F4C",
+			"inputs": [
+				{"name":"query_id","type":"uint64"}
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "config_slash_confirmed_err",
+			"id": "0xEE764F70",
+			"inputs": [
+				{"name":"query_id","type":"uint64"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "grant",
 			"id": "0x4772616E",
+			"inputs": [
+			],
+			"outputs": [
+			]
+		},
+		{
+			"name": "take_change",
 			"inputs": [
 			],
 			"outputs": [
@@ -84,11 +109,13 @@
 			]
 		},
 		{
-			"name": "ban",
-			"id": "0x42414E20",
+			"name": "report",
 			"inputs": [
-				{"name":"validator_idx","type":"uint16"},
-				{"name":"slash","type":"bool"}
+				{"name":"signature_hi","type":"uint256"},
+				{"name":"signature_lo","type":"uint256"},
+				{"name":"reporter_pubkey","type":"uint256"},
+				{"name":"victim_pubkey","type":"uint256"},
+				{"name":"metric_id","type":"uint8"}
 			],
 			"outputs": [
 			]
@@ -98,15 +125,30 @@
 			"inputs": [
 			],
 			"outputs": [
-				{"name":"version","type":"uint8"},
 				{"name":"election_open","type":"bool"},
 				{"components":[{"name":"elect_at","type":"uint32"},{"name":"elect_close","type":"uint32"},{"name":"min_stake","type":"uint128"},{"name":"total_stake","type":"uint128"},{"components":[{"name":"stake","type":"uint128"},{"name":"time","type":"uint32"},{"name":"max_factor","type":"uint32"},{"name":"addr","type":"uint256"},{"name":"adnl_addr","type":"uint256"}],"name":"members","type":"map(uint256,tuple)"},{"name":"failed","type":"bool"},{"name":"finished","type":"bool"}],"name":"cur_elect","type":"tuple"},
 				{"name":"credits","type":"map(uint256,uint128)"},
 				{"components":[{"name":"unfreeze_at","type":"uint32"},{"name":"stake_held","type":"uint32"},{"name":"vset_hash","type":"uint256"},{"components":[{"name":"addr","type":"uint256"},{"name":"weight","type":"uint64"},{"name":"stake","type":"uint128"},{"name":"banned","type":"bool"}],"name":"frozen_dict","type":"map(uint256,tuple)"},{"name":"total_stake","type":"uint128"},{"name":"bonuses","type":"uint128"},{"components":[{"name":"tag","type":"uint8"},{"name":"complaint","type":"cell"},{"name":"voters","type":"map(uint16,uint32)"},{"name":"vset_id","type":"uint256"},{"name":"weight_remaining","type":"int64"}],"name":"complaints","type":"map(uint256,tuple)"}],"name":"past_elections","type":"map(uint32,tuple)"},
 				{"name":"grams","type":"uint128"},
 				{"name":"active_id","type":"uint32"},
-				{"name":"active_hash","type":"uint256"},
-				{"name":"banned","type":"map(uint16,bool)"}
+				{"name":"active_hash","type":"uint256"}
+			]
+		},
+		{
+			"name": "get_banned",
+			"inputs": [
+			],
+			"outputs": [
+				{"name":"value0","type":"map(uint256,bool)"}
+			]
+		},
+		{
+			"name": "get_buckets",
+			"inputs": [
+				{"name":"victim_pubkey","type":"uint256"}
+			],
+			"outputs": [
+				{"components":[{"name":"weight","type":"uint64"},{"name":"reports","type":"map(uint256,uint64)"}],"name":"value0","type":"map(uint8,tuple)"}
 			]
 		},
 		{
