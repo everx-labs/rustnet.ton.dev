@@ -84,6 +84,16 @@
 			]
 		},
 		{
+			"name": "recover_stake_gracefully",
+			"id": "0x47657425",
+			"inputs": [
+				{"name":"query_id","type":"uint64"},
+				{"name":"elect_id","type":"uint32"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "upgrade_code",
 			"id": "0x4E436F64",
 			"inputs": [
@@ -144,6 +154,15 @@
 		},
 		{
 			"name": "get_buckets",
+			"inputs": [
+				{"name":"victim_pubkey","type":"uint256"}
+			],
+			"outputs": [
+				{"components":[{"name":"weight","type":"uint64"},{"name":"reports","type":"map(uint256,uint64)"}],"name":"value0","type":"map(uint8,tuple)"}
+			]
+		},
+		{
+			"name": "get_buckets_workchain",
 			"inputs": [
 				{"name":"victim_pubkey","type":"uint256"}
 			],
