@@ -1,4 +1,4 @@
-ARG RUST_VERSION=1.49.0
+ARG RUST_VERSION=1.51.0
 
 FROM ubuntu:18.04 as build
 
@@ -15,7 +15,10 @@ ENV RUST_BACKTRACE=1
 
 RUN apt-get update && apt-get install -y curl gnupg2 && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-RUN apt-get update && apt-get install -y \
+RUN echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse" >> /etc/apt/sources.list;\
+    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 871920D1991BC93C;\
+    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3B4FE6ACC0B21F32;\
+    apt-get update && apt-get install -y \
     gpg \
     tar \
     cmake \
@@ -26,7 +29,10 @@ RUN apt-get update && apt-get install -y \
     m4 \
     automake \
     clang \
-    git
+    git \
+    libzstd-dev
+
+ENV ZSTD_LIB_DIR=/usr/lib/x86_64-linux-gnu
 
 # rdkafka from confluent's repo
 RUN curl https://packages.confluent.io/deb/5.5/archive.key | apt-key add;\
@@ -40,7 +46,7 @@ COPY rust_install.sh /tmp/rust_install.sh
 RUN bash -c "/tmp/rust_install.sh ${RUST_VERSION}"
 
 WORKDIR /tonlabs/ton-node
-RUN cargo update && cargo build --release --features "metrics"
+RUN cargo update && cargo build --release --features "metrics,compression"
 
 WORKDIR /tonlabs/ton-labs-node-tools
 RUN cargo update && cargo build --release
@@ -52,10 +58,16 @@ FROM ubuntu:18.04
 
 ARG RUST_VERSION
 
+ENV TZ=Europe/Moscow
+
 RUN apt-get update && apt-get install -y curl gnupg2
 RUN curl https://packages.confluent.io/deb/5.5/archive.key | apt-key add
 RUN echo "deb [arch=amd64] https://packages.confluent.io/deb/5.5 stable main" >> /etc/apt/sources.list
-RUN apt-get update && apt-get install -y \
+RUN echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ focal main restricted universe multiverse" >> /etc/apt/sources.list;\
+    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 871920D1991BC93C;\
+    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 3B4FE6ACC0B21F32;\
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone;\
+    apt-get update && apt-get install -y \
     librdkafka1 \
     build-essential \
     cmake \
@@ -70,7 +82,10 @@ RUN apt-get update && apt-get install -y \
     netcat \
     python3 \
     python3-pip \
-    wget
+    wget \
+    libzstd-dev
+
+ENV ZSTD_LIB_DIR=/usr/lib/x86_64-linux-gnu
 
 # Get Rust
 COPY rust_install.sh /tmp/rust_install.sh
@@ -78,7 +93,7 @@ COPY rust_install.sh /tmp/rust_install.sh
 RUN bash -c "/tmp/rust_install.sh ${RUST_VERSION}"
 
 RUN mkdir -p /ton-node/tools
-COPY --from=build /tonlabs/ton-node/target/release/ton_node /ton-node/ton_node_no_kafka
+COPY --from=build /tonlabs/ton-node/target/release/ton_node /ton-node/ton_node_no_kafka_compression
 COPY --from=build /tonlabs/ton-labs-node-tools/target/release/console /ton-node/tools/
 COPY --from=build /tonlabs/ton-labs-node-tools/target/release/keygen /ton-node/tools/
 COPY --from=build /tonlabs/tonos-cli/target/release/tonos-cli /ton-node/tools/

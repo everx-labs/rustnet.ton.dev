@@ -61,6 +61,6 @@ if [ "$1" = "bash" ]; then
 else
     cd ${TON_NODE_ROOT_DIR}
     # shellcheck disable=SC2086
-    exec $NODE_EXEC --configs "${CONFIGS_PATH}" ${TON_NODE_EXTRA_ARGS} >>${TON_NODE_LOGS_DIR}/stdout.log \
+    exec ${NODE_EXEC}_compression --configs "${CONFIGS_PATH}" ${TON_NODE_EXTRA_ARGS} >>${TON_NODE_LOGS_DIR}/stdout.log \
         2>>${TON_NODE_LOGS_DIR}/stderr.log
 fi
