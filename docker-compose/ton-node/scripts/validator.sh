@@ -144,9 +144,9 @@ check_env() {
     cd ${WORK_DIR}
     if [ "${DEPOOL_ENABLE}" = "yes" ]; then
         ${UTILS_DIR}/tonos-cli config --url "${SDK_URL}" --retries "${TONOS_CLI_RETRIES}" \
-            --addr "${DEPOOL_ADDR}" --wallet "${MSIG_ADDR}" --keys "${KEYS_DIR}/msig.keys.json" --delimiters false
+            --addr "${DEPOOL_ADDR}" --wallet "${MSIG_ADDR}" --keys "${KEYS_DIR}/msig.keys.json"
     else
-        ${UTILS_DIR}/tonos-cli config --url "${SDK_URL}" --retries "${TONOS_CLI_RETRIES}" --delimiters false
+        ${UTILS_DIR}/tonos-cli config --url "${SDK_URL}" --retries "${TONOS_CLI_RETRIES}"
     fi
 
     if [ "$DEBUG" = "yes" ]; then
