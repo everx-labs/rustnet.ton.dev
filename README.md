@@ -116,7 +116,7 @@ Refer to [this document](https://github.com/tonlabs/ton-labs-contracts/tree/mast
 
 Once the wallet is deployed, place 2 files on the validator node:
 
-- `/ton-node/configs/${VALIDATOR_NAME}.addr` should contain validator multisignature wallet address in form `-1:XXX...XXX` (the folder on the host is `rustnet.ton.dev/docker-compose/ton-node/configs`) 
+- `/ton-node/configs/${VALIDATOR_NAME}.addr` should contain validator multisignature wallet address in form `X:XXX...XXX` (the folder on the host is `rustnet.ton.dev/docker-compose/ton-node/configs`) 
 - `/ton-node/configs/keys/msig.keys.json` should contain validator multisignature custodian's keypair (the folder on the host is `rustnet.ton.dev/docker-compose/ton-node/configs/keys/`)
 
 The node will use the wallet address and the keys provided to it to generate election requests each validation cycle.
