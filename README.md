@@ -56,8 +56,7 @@ Install and configure Docker according to the [official documentation](https://d
 
 **Note**: Make sure to add your user to the docker group, or run subsequent command as superuser:
 
-sudo usermod -a -G docker $USER
-
+    sudo usermod -a -G docker $USER
 
 ## 3. Deploy RUST Validator Node
 Do this step when the network is launched.
