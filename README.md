@@ -374,6 +374,6 @@ To remove the node container run the following command from the `rustnet.ton.dev
 and reset the git branch:
 
     git reset --hard origin/main
-    git clean -fdx
+    git clean -ffdx
 
 This will remove all local files and changes. Only then may node [deployment](#21-set-the-environment) be repeated.
