@@ -1,6 +1,7 @@
 #!/bin/bash -eEx
 
 ELECTOR_ADDR="-1:3333333333333333333333333333333333333333333333333333333333333333"
+NUM_OF_TICK_TOCKS="5"
 
 if [ "${RUST_NET_ENABLE}" = "yes" ]; then
     TON_NODE_ROOT="/ton-node"
@@ -48,12 +49,17 @@ fi
 ELECTIONS_WORK_DIR="${KEYS_DIR}/elections/${ACTIVE_ELECTION_ID}"
 
 if [ ! -f "${ELECTIONS_WORK_DIR}/depool-tick-tock-submitted" ]; then
-    if ${UTILS_DIR}/tonos-cli depool ticktock; then
-        echo "${ACTIVE_ELECTION_ID}" >"${ELECTIONS_WORK_DIR}/depool-tick-tock-submitted"
-    else
-        echo "ERROR: 'tonos-cli depool ticktock' failed"
-        exit 1
-    fi
+    for i in $(seq 1 ${NUM_OF_TICK_TOCKS}); do
+        echo "INFO: send tick tock #$i ... "
+        if ${UTILS_DIR}/tonos-cli depool ticktock; then
+            echo "${ACTIVE_ELECTION_ID}" >"${ELECTIONS_WORK_DIR}/depool-tick-tock-submitted"
+        else
+            echo "ERROR: 'tonos-cli depool ticktock' failed"
+            exit 1
+        fi
+        echo "INFO: send tick tock #$i ... DONE"
+        sleep 60
+    done
 else
     echo "WARNING: depool tick tock has been already sent"
     exit 0

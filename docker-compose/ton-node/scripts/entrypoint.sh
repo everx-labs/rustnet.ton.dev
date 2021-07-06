@@ -36,7 +36,7 @@ function f_iscron() {
         if [ "${DEPOOL_ENABLE}" = "yes" ]; then
             {
                 echo "DEPOOL_ENABLE=yes"
-                echo "*/10 * * * *    root  ${TON_NODE_SCRIPTS_DIR}/send_depool_tick_tock.sh >>${TON_NODE_LOGS_DIR}/send_depool_tick_tock.log 2>&1"
+                echo "* * * * *    root  ${TON_NODE_SCRIPTS_DIR}/send_depool_tick_tock.sh >>${TON_NODE_LOGS_DIR}/send_depool_tick_tock.log 2>&1"
                 echo "*/5 * * * *     root  ${TON_NODE_SCRIPTS_DIR}/validator.sh >>${TON_NODE_LOGS_DIR}/validator.log 2>&1"
             } >>/etc/crontab
         else
