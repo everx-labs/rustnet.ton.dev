@@ -31,6 +31,7 @@ function f_iscron() {
             echo "RUST_NET_ENABLE=yes"
             echo "VALIDATOR_NAME=${VALIDATOR_NAME}"
             echo "SDK_URL=${SDK_URL}"
+            echo "SDK_ENDPOINT_URL_LIST=${SDK_ENDPOINT_URL_LIST}"
             echo "ELECTOR_TYPE=${ELECTOR_TYPE}"
         } >>/etc/crontab
         if [ "${DEPOOL_ENABLE}" = "yes" ]; then
