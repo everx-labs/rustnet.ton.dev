@@ -161,7 +161,7 @@ check_env() {
 
     if [ -n "${SDK_ENDPOINT_URL_LIST}" ]; then
         # shellcheck disable=SC2086
-        ${UTILS_DIR}/tonos-cli config endpoint add ${SDK_ENDPOINT_URL_LIST}
+        ${UTILS_DIR}/tonos-cli config endpoint add ${SDK_URL} ${SDK_ENDPOINT_URL_LIST}
     fi
 }
 
