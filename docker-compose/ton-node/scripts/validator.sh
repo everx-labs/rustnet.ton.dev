@@ -143,10 +143,10 @@ check_env() {
 
     cd ${WORK_DIR}
     if [ "${DEPOOL_ENABLE}" = "yes" ]; then
-        ${UTILS_DIR}/tonos-cli config --url "${SDK_URL}" --retries "${TONOS_CLI_RETRIES}" \
+        ${UTILS_DIR}/tonos-cli config --retries "${TONOS_CLI_RETRIES}" \
             --addr "${DEPOOL_ADDR}" --wallet "${MSIG_ADDR}" --keys "${KEYS_DIR}/msig.keys.json"
     else
-        ${UTILS_DIR}/tonos-cli config --url "${SDK_URL}" --retries "${TONOS_CLI_RETRIES}"
+        ${UTILS_DIR}/tonos-cli config --retries "${TONOS_CLI_RETRIES}"
     fi
 
     if [ "$DEBUG" = "yes" ]; then
@@ -155,9 +155,13 @@ check_env() {
         echo "DEBUG: ${WORK_DIR}/tonos-cli.conf.json END"
     fi
 
-    if [ "${TONOS_CLI_RETRIES}" != "$(jq .retries ${WORK_DIR}/tonos-cli.conf.json)" ]; then
-        echo "ERROR: wrong configuration in ${WORK_DIR}/tonos-cli.conf.json"
-        exit_and_clean 1 $LINENO
+    if [ -n "${SDK_URL}" ] && [ -z "${SDK_ENDPOINT_URL_LIST}" ]; then
+        ${UTILS_DIR}/tonos-cli config --url "${SDK_URL}"
+    fi
+
+    if [ -n "${SDK_ENDPOINT_URL_LIST}" ]; then
+        # shellcheck disable=SC2086
+        ${UTILS_DIR}/tonos-cli config endpoint add ${SDK_ENDPOINT_URL_LIST}
     fi
 }
 
