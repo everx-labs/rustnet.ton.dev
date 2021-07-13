@@ -155,7 +155,7 @@ check_env() {
         echo "DEBUG: ${WORK_DIR}/tonos-cli.conf.json END"
     fi
 
-    if [ -n "${SDK_URL}" ] && [ -z "${SDK_ENDPOINT_URL_LIST}" ]; then
+    if [ -n "${SDK_URL}" ]; then
         ${UTILS_DIR}/tonos-cli config --url "${SDK_URL}"
     fi
 
