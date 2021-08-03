@@ -94,6 +94,15 @@
 			]
 		},
 		{
+			"name": "get_elect_at",
+			"id": "0x47657426",
+			"inputs": [
+				{"name":"query_id","type":"uint64"}
+			],
+			"outputs": [
+			]
+		},
+		{
 			"name": "upgrade_code",
 			"id": "0x4E436F64",
 			"inputs": [
