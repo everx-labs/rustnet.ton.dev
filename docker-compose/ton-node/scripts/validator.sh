@@ -12,11 +12,30 @@ exit_and_clean() {
     EXIT_CODE="$1"
     EXIT_LINE="$2"
     rm -f ${LOCK_FILE}
-    [ "${EXIT_CODE}" -eq 0 ] && rm -rf "${TMP_DIR}"
+    rm -rf "${TMP_DIR}"
     echo "INFO: script exited (exit code: ${EXIT_CODE}, script line: ${EXIT_LINE})"
+
+    # https://tldp.org/LDP/abs/html/exitcodes.html
+    case "${EXIT_CODE}" in
+    "132")
+        echo "ERROR: SIGILL in child process"
+        ;;
+    "134")
+        echo "ERROR: SIGABRT in child process"
+        ;;
+    "138")
+        echo "ERROR: SIGBUS in child process"
+        ;;
+    "139")
+        echo "ERROR: SIGSEGV in child process"
+        ;;
+    esac
+
     echo "INFO: $(basename "$0") END $(date +%s) / $(date)"
     exit "${EXIT_CODE}"
 }
+
+trap 'exit_and_clean $? $LINENO' SIGHUP SIGINT SIGQUIT SIGTERM ERR CHLD
 
 init_env() {
     if [ "$DEBUG" = "yes" ]; then
@@ -24,13 +43,24 @@ init_env() {
     fi
 
     if [ -f ${LOCK_FILE} ]; then
-        echo "ERROR: ${LOCK_FILE} exists, exiting..."
-        exit 1
-    else
-        touch ${LOCK_FILE}
+        echo "WARNING: ${LOCK_FILE} exists"
+        PID_FROM_LOCK_FILE=$(cat ${LOCK_FILE})
+
+        if [ -n "${PID_FROM_LOCK_FILE}" ]; then
+            if ps --pid "${PID_FROM_LOCK_FILE}"; then
+                echo "WARNING: process with PID ${PID_FROM_LOCK_FILE} from ${LOCK_FILE} exists (another instance of $(basename "$0") is running), exiting..."
+                exit 1
+            else
+                echo "WARNING: process with PID ${PID_FROM_LOCK_FILE} from ${LOCK_FILE} does not exist, removing stale ${LOCK_FILE}..."
+                rm -f ${LOCK_FILE}
+            fi
+        else
+            echo "WARNING: no PID in ${LOCK_FILE}, check log file, removing stale ${LOCK_FILE}..."
+            rm -f ${LOCK_FILE}
+        fi
     fi
 
-    trap 'exit_and_clean $? $LINENO' SIGHUP SIGINT SIGQUIT SIGTERM ERR
+    echo "$$" >${LOCK_FILE}
 
     echo "INFO: $(basename "$0") BEGIN $(date +%s) / $(date)"
 
@@ -158,6 +188,9 @@ check_env() {
     if [ -n "${SDK_URL}" ]; then
         ${UTILS_DIR}/tonos-cli config --url "${SDK_URL}"
     fi
+
+    # '--lifetime 500' is needed for unstable front
+    ${UTILS_DIR}/tonos-cli config --lifetime 500
 
     if [ -n "${SDK_ENDPOINT_URL_LIST}" ]; then
         # shellcheck disable=SC2086
