@@ -176,7 +176,12 @@ To delete the node use the following commands:
 
 # Updating the node
 
-To update the node, first delete it:
+To update the node with minimal delay and without deletion of db and the node config first change `TON_NODE_GITHUB_COMMIT_ID` in `env.sh` script (also change `TON_NODE_TOOLS_GITHUB_COMMIT_ID` and `TONOS_CLI_GITHUB_COMMIT_ID` if necessary).
+Then use the following command:
+
+    ./update.sh
+
+To fully update the node (with db and the node config removal), first delete it:
 
     docker-compose down
     git reset --hard origin/main
