@@ -7,6 +7,7 @@ DEBUG=yes
 # Stake value for fixed staking mode (not applicable for dynamic staking mode)
 STAKE="$1"
 LOCK_FILE="/tmp/validator.lock"
+TMP_DIR=/tmp/$(basename "$0" .sh)_$$
 
 exit_and_clean() {
     EXIT_CODE="$1"
@@ -35,7 +36,7 @@ exit_and_clean() {
     exit "${EXIT_CODE}"
 }
 
-trap 'exit_and_clean $? $LINENO' SIGHUP SIGINT SIGQUIT SIGTERM ERR CHLD
+trap 'exit_and_clean $? $LINENO' SIGHUP SIGINT SIGQUIT SIGTERM ERR
 
 init_env() {
     if [ "$DEBUG" = "yes" ]; then
@@ -64,7 +65,6 @@ init_env() {
 
     echo "INFO: $(basename "$0") BEGIN $(date +%s) / $(date)"
 
-    TMP_DIR=/tmp/$(basename "$0" .sh)_$$
     rm -rf "${TMP_DIR}"
     mkdir -p "${TMP_DIR}"
 
