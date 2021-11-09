@@ -96,7 +96,8 @@ COPY rust_install.sh /tmp/rust_install.sh
 RUN bash -c "/tmp/rust_install.sh ${RUST_VERSION}"
 
 RUN mkdir -p /ton-node/tools
-COPY --from=build /tonlabs/ton-node/target/release/ton_node /ton-node/ton_node_no_kafka_compression
+#COPY --from=build /tonlabs/ton-node/target/release/ton_node /ton-node/ton_node_no_kafka_compression
+COPY --from=build /tonlabs/ton-node/target/release/ton_node /ton-node/ton_node_no_kafka
 COPY --from=build /tonlabs/ton-labs-node-tools/target/release/console /ton-node/tools/
 COPY --from=build /tonlabs/ton-labs-node-tools/target/release/keygen /ton-node/tools/
 COPY --from=build /tonlabs/tonos-cli/target/release/tonos-cli /ton-node/tools/
