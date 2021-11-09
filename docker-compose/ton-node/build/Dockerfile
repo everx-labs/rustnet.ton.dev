@@ -1,4 +1,4 @@
-ARG RUST_VERSION=1.51.0
+ARG RUST_VERSION=1.55.0
 
 FROM ubuntu:18.04 as build
 
@@ -11,7 +11,7 @@ COPY tonos-cli /tonlabs/tonos-cli
 # install deps
 ENV TZ=Europe/Moscow
 ENV PATH="/root/.cargo/bin:${PATH}"
-ENV RUST_BACKTRACE=1
+#ENV RUST_BACKTRACE=1
 
 RUN apt-get update && apt-get install -y curl gnupg2 && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
@@ -30,7 +30,8 @@ RUN echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ focal main restrict
     automake \
     clang \
     git \
-    libzstd-dev
+    libzstd-dev \
+    libgoogle-perftools-dev
 
 ENV ZSTD_LIB_DIR=/usr/lib/x86_64-linux-gnu
 
@@ -46,7 +47,8 @@ COPY rust_install.sh /tmp/rust_install.sh
 RUN bash -c "/tmp/rust_install.sh ${RUST_VERSION}"
 
 WORKDIR /tonlabs/ton-node
-RUN cargo update && cargo build --release --features "metrics,compression"
+RUN #cargo update && cargo build --release --features "metrics,compression"
+RUN cargo update && cargo build --release --features "metrics"
 
 WORKDIR /tonlabs/ton-labs-node-tools
 RUN cargo update && cargo build --release
@@ -83,7 +85,8 @@ RUN echo "deb [arch=amd64] http://archive.ubuntu.com/ubuntu/ focal main restrict
     python3 \
     python3-pip \
     wget \
-    libzstd-dev
+    libzstd-dev \
+    libgoogle-perftools-dev
 
 ENV ZSTD_LIB_DIR=/usr/lib/x86_64-linux-gnu
 

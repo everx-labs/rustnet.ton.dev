@@ -102,7 +102,7 @@ There is a small difference between direct staking and DePool validators on this
 - For direct staking validator it is necessary to create and deploy a validator [SafeMultisig](https://github.com/tonlabs/ton-labs-contracts/tree/master/solidity/safemultisig) wallet in `-1` chain.
 - For a DePool validator it is necessary to create and deploy a validator [SafeMultisig](https://github.com/tonlabs/ton-labs-contracts/tree/master/solidity/safemultisig) wallet in `0` chain.
 
-You can use [TONOS-CLI](https://github.com/tonlabs/tonos-cli) for this purpose. It should be [configured](https://github.com/tonlabs/tonos-cli) to connect to the rustnet.ton.dev network.
+You can use [TONOS-CLI](https://github.com/tonlabs/tonos-cli) for this purpose. It should be [configured](https://github.com/tonlabs/tonos-cli) to connect to the main.ton.dev network.
 
 Refer to [this document](https://github.com/tonlabs/ton-labs-contracts/tree/master/solidity/safemultisig#3-create-wallet) for the detailed wallet creation procedure, or follow the links in the short guide below:
 
@@ -128,7 +128,7 @@ The node will use the wallet address and the keys provided to it to generate ele
 
 For a DePool validator it is necessary to deploy a [DePool](https://github.com/tonlabs/ton-labs-contracts/tree/master/solidity/depool) contract to workchain `0`.
 
-You can use [TONOS-CLI](https://github.com/tonlabs/tonos-cli) for this purpose. It should be [configured](https://github.com/tonlabs/tonos-cli) to connect to the rustnet.ton.dev network.
+You can use [TONOS-CLI](https://github.com/tonlabs/tonos-cli) for this purpose. It should be [configured](https://github.com/tonlabs/tonos-cli) to connect to the main.ton.dev network.
 
 Refer to [this document](https://github.com/tonlabs/ton-labs-contracts/tree/master/solidity/depool#depool) for the detailed DePool creation procedure, or follow the links in the short guide below:
 

@@ -29,10 +29,10 @@ function f_iscron() {
     if ! grep "validator.sh" /etc/crontab >/dev/null 2>&1; then
         {
             echo "RUST_NET_ENABLE=yes"
-            echo "VALIDATOR_NAME=${VALIDATOR_NAME}"
-            echo "SDK_URL=${SDK_URL}"
-            echo "SDK_ENDPOINT_URL_LIST=${SDK_ENDPOINT_URL_LIST}"
-            echo "ELECTOR_TYPE=${ELECTOR_TYPE}"
+            echo "VALIDATOR_NAME=\"${VALIDATOR_NAME}\""
+            echo "SDK_URL=\"${SDK_URL}\""
+            echo "SDK_ENDPOINT_URL_LIST=\"${SDK_ENDPOINT_URL_LIST}\""
+            echo "ELECTOR_TYPE=\"${ELECTOR_TYPE}\""
         } >>/etc/crontab
         if [ "${DEPOOL_ENABLE}" = "yes" ]; then
             {
@@ -43,7 +43,7 @@ function f_iscron() {
         else
             {
                 echo "STAKE=$STAKE"
-                echo "*/5 * * * *  root  ${TON_NODE_SCRIPTS_DIR}/validator.sh \${STAKE} >>${TON_NODE_LOGS_DIR}/validator.log 2>&1"
+                echo "*/2 * * * *  root  ${TON_NODE_SCRIPTS_DIR}/validator.sh \${STAKE} >>${TON_NODE_LOGS_DIR}/validator.log 2>&1"
             } >>/etc/crontab
         fi
     fi
@@ -62,6 +62,7 @@ if [ "$1" = "bash" ]; then
 else
     cd ${TON_NODE_ROOT_DIR}
     # shellcheck disable=SC2086
-    exec ${NODE_EXEC}_compression --configs "${CONFIGS_PATH}" ${TON_NODE_EXTRA_ARGS} >>${TON_NODE_LOGS_DIR}/stdout.log \
+    #exec ${NODE_EXEC}_compression --configs "${CONFIGS_PATH}" ${TON_NODE_EXTRA_ARGS} >>${TON_NODE_LOGS_DIR}/stdout.log \
+    exec ${NODE_EXEC} --configs "${CONFIGS_PATH}" ${TON_NODE_EXTRA_ARGS} >>${TON_NODE_LOGS_DIR}/stdout.log \
         2>>${TON_NODE_LOGS_DIR}/stderr.log
 fi

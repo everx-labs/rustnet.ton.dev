@@ -8,6 +8,8 @@ DEBUG=yes
 STAKE="$1"
 LOCK_FILE="/tmp/validator.lock"
 TMP_DIR=/tmp/$(basename "$0" .sh)_$$
+# Available values: console, sdk
+VALIDATOR_TYPE=${VALIDATOR_TYPE:-sdk}
 
 exit_and_clean() {
     EXIT_CODE="$1"
@@ -63,7 +65,7 @@ init_env() {
 
     echo "$$" >${LOCK_FILE}
 
-    echo "INFO: $(basename "$0") BEGIN $(date +%s) / $(date)"
+    echo "INFO: $(basename "$0") BEGIN $(date +%s) / $(date) VALIDATOR_TYPE = ${VALIDATOR_TYPE}"
 
     rm -rf "${TMP_DIR}"
     mkdir -p "${TMP_DIR}"
@@ -86,6 +88,7 @@ init_env() {
     MAX_FACTOR=${MAX_FACTOR:-3}
     ELECTOR_ADDR="-1:3333333333333333333333333333333333333333333333333333333333333333"
     TON_BUILD_DIR=""
+    BLOCKCHAIN_TIMEOUT="60"
 
     if [ "${RUST_NET_ENABLE}" = "yes" ]; then
         TON_NODE_ROOT="/ton-node"
@@ -113,11 +116,22 @@ init_env() {
     fi
 
     # Supported values: fift, solidity
-    ELECTOR_TYPE=${ELECTOR_TYPE:-solidity}
+    ELECTOR_TYPE=${ELECTOR_TYPE:-fift}
     TONOS_CLI_RETRIES=${TONOS_CLI_RETRIES:-5}
     # This file is created during 1st script run in dynamic staking mode
     # It is used to split the initial amount of tokens among 2 election cycles
     VALIDATOR_INIT_BALANCE_FILE=${KEYS_DIR}/validator_init_balance.txt
+
+    if [ "${VALIDATOR_TYPE}" = "console" ]; then
+        if ! ${UTILS_DIR}/console -C ${CONFIGS_DIR}/console.json -c "getaccountstate ${ELECTOR_ADDR} ${TMP_DIR}/elector_account.boc"; then
+            echo "ERROR: console getaccountstate ${ELECTOR_ADDR} failed"
+            exit_and_clean 1 $LINENO
+        fi
+        if [ ! -f "${TMP_DIR}/elector_account.boc" ]; then
+            echo "ERROR: ${TMP_DIR}/elector_account.boc does not exist"
+            exit_and_clean 1 $LINENO
+        fi
+    fi
 }
 
 check_env() {
@@ -204,6 +218,17 @@ recover_stake() {
         return
     fi
 
+    case ${VALIDATOR_TYPE} in
+    "sdk")
+        TONOS_CLI_OUTPUT=$(${UTILS_DIR}/tonos-cli account "${MSIG_ADDR}")
+        VALIDATOR_ACTUAL_BALANCE_NANO=$(echo "${TONOS_CLI_OUTPUT}" | awk '/balance/ {print $2}') # in nano tokens
+        ;;
+    "console")
+        TONOS_CLI_OUTPUT=$(${UTILS_DIR}/console -C ${CONFIGS_DIR}/console.json -j -c "getaccount ${MSIG_ADDR}")
+        VALIDATOR_ACTUAL_BALANCE_NANO=$(echo "${TONOS_CLI_OUTPUT}" | jq -r '.balance')
+        ;;
+    esac
+
     MSIG_ADDR_HEX="0x$(echo "${MSIG_ADDR}" | cut -d ':' -f 2)"
 
     case ${ELECTOR_TYPE} in
@@ -212,7 +237,14 @@ recover_stake() {
         RECOVER_AMOUNT_HEX=$(echo "${TONOS_CLI_OUTPUT}" | awk -F'"' '/Result:/ {print $2}')
         ;;
     "solidity")
-        TONOS_CLI_OUTPUT=$(${UTILS_DIR}/tonos-cli run ${ELECTOR_ADDR} compute_returned_stake "{\"wallet_addr\":\"${MSIG_ADDR_HEX}\"}" --abi ${CONFIGS_DIR}/Elector.abi.json 2>&1)
+        case ${VALIDATOR_TYPE} in
+        "sdk")
+            TONOS_CLI_OUTPUT=$(${UTILS_DIR}/tonos-cli run ${ELECTOR_ADDR} compute_returned_stake "{\"wallet_addr\":\"${MSIG_ADDR_HEX}\"}" --abi ${CONFIGS_DIR}/Elector.abi.json 2>&1)
+            ;;
+        "console")
+            TONOS_CLI_OUTPUT=$(${UTILS_DIR}/tonos-cli run --boc "${TMP_DIR}/elector_account.boc" compute_returned_stake "{\"wallet_addr\":\"${MSIG_ADDR_HEX}\"}" --abi ${CONFIGS_DIR}/Elector.abi.json 2>&1)
+            ;;
+        esac
         RECOVER_AMOUNT_HEX=$(echo "${TONOS_CLI_OUTPUT}" | awk '/value0/ {print $2}' | tr -d '"')
         ;;
     *)
@@ -231,8 +263,15 @@ recover_stake() {
 
     if [ "${RECOVER_AMOUNT}" != "0" ]; then
         if [ "${RUST_NET_ENABLE}" = "yes" ]; then
-            ${UTILS_DIR}/console -C ${CONFIGS_DIR}/console.json -c recover_stake
-            mv recover-query.boc "${TMP_DIR}/recover-query.boc"
+            if ! ${UTILS_DIR}/console -C ${CONFIGS_DIR}/console.json -c recover_stake; then
+                echo "ERROR: console recover_stake failed"
+                exit_and_clean 1 $LINENO
+            fi
+            if [ ! -f "${WORK_DIR}/recover-query.boc" ]; then
+                echo "ERROR: ${TMP_DIR}/elector_account.boc does not exist"
+                exit_and_clean 1 $LINENO
+            fi
+            mv ${WORK_DIR}/recover-query.boc "${TMP_DIR}/recover-query.boc"
         else
             "${TON_BUILD_DIR}/crypto/fift" -I "${CRYPTO_LIBS}" -s recover-stake.fif "${TMP_DIR}/recover-query.boc"
         fi
@@ -249,20 +288,54 @@ recover_stake() {
             exit_and_clean 1 $LINENO
         fi
 
-        echo "INFO: tonos-cli submitTransaction attempt..."
         set -x
-        if ! "${UTILS_DIR}/tonos-cli" call "${MSIG_ADDR}" submitTransaction \
-            "{\"dest\":\"${ELECTOR_ADDR}\",\"value\":\"1000000000\",\"bounce\":true,\"allBalance\":false,\"payload\":\"${RECOVER_QUERY_BOC}\"}" \
-            --abi "${CONFIGS_DIR}/SafeMultisigWallet.abi.json" \
-            --sign "${KEYS_DIR}/msig.keys.json"; then
-            echo "INFO: tonos-cli submitTransaction attempt... FAIL"
-            exit_and_clean 1 $LINENO
-        else
-            echo "INFO: tonos-cli submitTransaction attempt... PASS"
-            date +"INFO: %F %T Recover of ${RECOVER_AMOUNT} tokens requested"
-            exit_and_clean 0 $LINENO
-        fi
+        case ${VALIDATOR_TYPE} in
+        "sdk")
+            echo "INFO: tonos-cli call submitTransaction attempt..."
+            if ! "${UTILS_DIR}/tonos-cli" call "${MSIG_ADDR}" submitTransaction \
+                "{\"dest\":\"${ELECTOR_ADDR}\",\"value\":\"1000000000\",\"bounce\":true,\"allBalance\":false,\"payload\":\"${RECOVER_QUERY_BOC}\"}" \
+                --abi "${CONFIGS_DIR}/SafeMultisigWallet.abi.json" \
+                --sign "${KEYS_DIR}/msig.keys.json"; then
+                echo "INFO: tonos-cli call submitTransaction attempt... FAIL"
+                exit_and_clean 1 $LINENO
+            else
+                echo "INFO: tonos-cli call submitTransaction attempt... PASS"
+            fi
+            ;;
+        "console")
+            if ! "${UTILS_DIR}/tonos-cli" message "${MSIG_ADDR}" submitTransaction \
+                "{\"dest\":\"${ELECTOR_ADDR}\",\"value\":\"1000000000\",\"bounce\":true,\"allBalance\":false,\"payload\":\"${RECOVER_QUERY_BOC}\"}" \
+                --abi "${CONFIGS_DIR}/SafeMultisigWallet.abi.json" \
+                --sign "${KEYS_DIR}/msig.keys.json" \
+                --raw --output "${TMP_DIR}/recover_query_msg.boc"; then
+                exit_and_clean 1 $LINENO
+            fi
+            if [ ! -f "${TMP_DIR}/recover_query_msg.boc" ]; then
+                echo "ERROR: ${TMP_DIR}/recover_query_msg.boc does not exist"
+                exit_and_clean 1 $LINENO
+            fi
+            if ! ${UTILS_DIR}/console -C ${CONFIGS_DIR}/console.json -c "sendmessage ${TMP_DIR}/recover_query_msg.boc"; then
+                echo "ERROR: console sendmessage ${TMP_DIR}/recover_query_msg.boc failed"
+                exit_and_clean 1 $LINENO
+            fi
+
+            sleep ${BLOCKCHAIN_TIMEOUT}
+
+            TONOS_CLI_OUTPUT=$(${UTILS_DIR}/console -C ${CONFIGS_DIR}/console.json -j -c "getaccount ${MSIG_ADDR}")
+            VALIDATOR_NEW_BALANCE_NANO=$(echo "${TONOS_CLI_OUTPUT}" | jq -r '.balance')
+            VALIDATOR_BALANCE_DIFF=$((VALIDATOR_NEW_BALANCE_NANO - VALIDATOR_ACTUAL_BALANCE_NANO))
+
+            # 10000 tokens - minimal stake
+            if [ ${VALIDATOR_BALANCE_DIFF} -lt "10000000000000" ]; then
+                echo "ERROR: stake was not recovered"
+                exit_and_clean 1 $LINENO
+            fi
+            ;;
+        esac
         set +x
+        sleep 10
+        date +"INFO: %F %T Recover of ${RECOVER_AMOUNT} tokens requested"
+        exit_and_clean 0 $LINENO
     else
         echo "INFO: nothing to recover"
     fi
@@ -275,7 +348,14 @@ prepare_for_elections() {
         ACTIVE_ELECTION_ID_HEX=$(echo "${TONOS_CLI_OUTPUT}" | awk -F'"' '/Result:/ {print $2}')
         ;;
     "solidity")
-        TONOS_CLI_OUTPUT=$(${UTILS_DIR}/tonos-cli run ${ELECTOR_ADDR} active_election_id {} --abi ${CONFIGS_DIR}/Elector.abi.json 2>&1)
+        case ${VALIDATOR_TYPE} in
+        "sdk")
+            TONOS_CLI_OUTPUT=$(${UTILS_DIR}/tonos-cli run ${ELECTOR_ADDR} active_election_id {} --abi ${CONFIGS_DIR}/Elector.abi.json 2>&1)
+            ;;
+        "console")
+            TONOS_CLI_OUTPUT=$(${UTILS_DIR}/tonos-cli run --boc "${TMP_DIR}/elector_account.boc" active_election_id {} --abi ${CONFIGS_DIR}/Elector.abi.json 2>&1)
+            ;;
+        esac
         ACTIVE_ELECTION_ID_HEX=$(echo "${TONOS_CLI_OUTPUT}" | awk '/value0/ {print $2}' | tr -d '"')
         ;;
     *)
@@ -379,7 +459,14 @@ create_elector_request() {
         if [ "${RUST_NET_ENABLE}" = "yes" ]; then
             jq ".wallet_id = \"${VALIDATOR_MSIG_ADDR}\"" ${CONFIGS_DIR}/console.json >"${TMP_DIR}/console.json"
             cp "${TMP_DIR}/console.json" ${CONFIGS_DIR}/console.json
-            ${UTILS_DIR}/console -C ${CONFIGS_DIR}/console.json -c "election-bid ${ELECTION_START} ${ELECTION_STOP}"
+            if ! ${UTILS_DIR}/console -C ${CONFIGS_DIR}/console.json -c "election-bid ${ELECTION_START} ${ELECTION_STOP}"; then
+                echo "ERROR: console election-bid ${ELECTION_START} ${ELECTION_STOP} failed"
+                exit_and_clean 1 $LINENO
+            fi
+            if [ ! -f ${WORK_DIR}/validator-query.boc ]; then
+                echo "ERROR: ${WORK_DIR}/validator-query.boc does not exist"
+                exit_and_clean 1 $LINENO
+            fi
             mv validator-query.boc "${ELECTIONS_WORK_DIR}"
         else
             if [ -f "${ELECTIONS_WORK_DIR}/${VALIDATOR_NAME}-election-key" ]; then
@@ -495,9 +582,18 @@ create_elector_request() {
 }
 
 submit_stake() {
-    TONOS_CLI_OUTPUT=$(${UTILS_DIR}/tonos-cli account "${MSIG_ADDR}")
-    VALIDATOR_ACTUAL_BALANCE_NANO=$(echo "${TONOS_CLI_OUTPUT}" | awk '/balance/ {print $2}') # in nano tokens
-    VALIDATOR_ACTUAL_BALANCE=$((VALIDATOR_ACTUAL_BALANCE_NANO / 1000000000))                 # in tokens
+    case ${VALIDATOR_TYPE} in
+    "sdk")
+        TONOS_CLI_OUTPUT=$(${UTILS_DIR}/tonos-cli account "${MSIG_ADDR}")
+        VALIDATOR_ACTUAL_BALANCE_NANO=$(echo "${TONOS_CLI_OUTPUT}" | awk '/balance/ {print $2}') # in nano tokens
+        ;;
+    "console")
+        TONOS_CLI_OUTPUT=$(${UTILS_DIR}/console -C ${CONFIGS_DIR}/console.json -j -c "getaccount ${MSIG_ADDR}")
+        VALIDATOR_ACTUAL_BALANCE_NANO=$(echo "${TONOS_CLI_OUTPUT}" | jq -r '.balance')
+        ;;
+    esac
+
+    VALIDATOR_ACTUAL_BALANCE=$((VALIDATOR_ACTUAL_BALANCE_NANO / 1000000000)) # in tokens
     echo "INFO: ${MSIG_ADDR} VALIDATOR_ACTUAL_BALANCE = ${VALIDATOR_ACTUAL_BALANCE} tokens"
 
     if [ -z "${VALIDATOR_ACTUAL_BALANCE}" ]; then
@@ -578,20 +674,55 @@ submit_stake() {
             exit_and_clean 1 $LINENO
         fi
 
-        echo "INFO: tonos-cli submitTransaction attempt..."
         set -x
-        if ! "${UTILS_DIR}/tonos-cli" call "${MSIG_ADDR}" submitTransaction \
-            "{\"dest\":\"${ELECTOR_ADDR}\",\"value\":\"${NANOSTAKE}\",\"bounce\":true,\"allBalance\":false,\"payload\":\"${VALIDATOR_QUERY_BOC}\"}" \
-            --abi "${CONFIGS_DIR}/SafeMultisigWallet.abi.json" \
-            --sign "${KEYS_DIR}/msig.keys.json"; then
-            echo "INFO: tonos-cli submitTransaction attempt... FAIL"
-            exit_and_clean 1 $LINENO
-        else
-            echo "INFO: tonos-cli submitTransaction attempt... PASS"
-            date +"INFO: %F %T prepared for elections ${ACTIVE_ELECTION_ID}"
-            echo "${ACTIVE_ELECTION_ID}" >"${ELECTIONS_WORK_DIR}/active-election-id-submitted"
-        fi
+        case ${VALIDATOR_TYPE} in
+        "sdk")
+            echo "INFO: tonos-cli submitTransaction attempt..."
+            if ! "${UTILS_DIR}/tonos-cli" call "${MSIG_ADDR}" submitTransaction \
+                "{\"dest\":\"${ELECTOR_ADDR}\",\"value\":\"${NANOSTAKE}\",\"bounce\":true,\"allBalance\":false,\"payload\":\"${VALIDATOR_QUERY_BOC}\"}" \
+                --abi "${CONFIGS_DIR}/SafeMultisigWallet.abi.json" \
+                --sign "${KEYS_DIR}/msig.keys.json"; then
+                echo "INFO: tonos-cli submitTransaction attempt... FAIL"
+                exit_and_clean 1 $LINENO
+            else
+                echo "INFO: tonos-cli submitTransaction attempt... PASS"
+            fi
+            ;;
+        "console")
+            if ! "${UTILS_DIR}/tonos-cli" message "${MSIG_ADDR}" submitTransaction \
+                "{\"dest\":\"${ELECTOR_ADDR}\",\"value\":\"${NANOSTAKE}\",\"bounce\":true,\"allBalance\":false,\"payload\":\"${VALIDATOR_QUERY_BOC}\"}" \
+                --abi "${CONFIGS_DIR}/SafeMultisigWallet.abi.json" \
+                --sign "${KEYS_DIR}/msig.keys.json" \
+                --raw --output "${ELECTIONS_WORK_DIR}/validator_query_msg.boc"; then
+                exit_and_clean 1 $LINENO
+            else
+                if [ ! -f "${ELECTIONS_WORK_DIR}/validator_query_msg.boc" ]; then
+                    echo "ERROR: ${ELECTIONS_WORK_DIR}/validator_query_msg.boc does not exist"
+                    exit_and_clean 1 $LINENO
+                fi
+                if ! ${UTILS_DIR}/console -C ${CONFIGS_DIR}/console.json -c "sendmessage ${ELECTIONS_WORK_DIR}/validator_query_msg.boc"; then
+                    echo "ERROR: console sendmessage ${ELECTIONS_WORK_DIR}/validator_query_msg.boc failed"
+                    exit_and_clean 1 $LINENO
+                fi
+
+                sleep ${BLOCKCHAIN_TIMEOUT}
+
+                TONOS_CLI_OUTPUT=$(${UTILS_DIR}/console -C ${CONFIGS_DIR}/console.json -j -c "getaccount ${MSIG_ADDR}")
+                VALIDATOR_NEW_BALANCE_NANO=$(echo "${TONOS_CLI_OUTPUT}" | jq -r '.balance')
+                VALIDATOR_BALANCE_DIFF=$((VALIDATOR_ACTUAL_BALANCE_NANO - VALIDATOR_NEW_BALANCE_NANO))
+
+                # 10000 tokens - minimal stake
+                if [ ${VALIDATOR_BALANCE_DIFF} -lt "10000000000000" ]; then
+                    echo "ERROR: stake was not delivered"
+                    exit_and_clean 1 $LINENO
+                fi
+            fi
+            ;;
+        esac
         set +x
+        sleep 10
+        date +"INFO: %F %T prepared for elections ${ACTIVE_ELECTION_ID}"
+        echo "${ACTIVE_ELECTION_ID}" >"${ELECTIONS_WORK_DIR}/active-election-id-submitted"
     fi
 }
 
