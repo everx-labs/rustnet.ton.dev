@@ -21,4 +21,4 @@ export TON_NODE_TOOLS_GITHUB_REPO="https://github.com/tonlabs/ton-labs-node-tool
 export TON_NODE_TOOLS_GITHUB_COMMIT_ID="master"
 export TONOS_CLI_GITHUB_REPO="https://github.com/tonlabs/tonos-cli.git"
 export TONOS_CLI_GITHUB_COMMIT_ID="master"
-export DEPOOL_ENABLE="yes"
+export DEPOOL_ENABLE="no"
