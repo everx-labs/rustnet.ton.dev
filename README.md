@@ -13,7 +13,7 @@ This HOWTO contains instructions on how to build and configure a RUST validator 
   - [5. Configure validator multisignature wallet](#5-configure-validator-multisignature-wallet)
   - [6. Configure DePool](#6-configure-depool)
   - [7. Upgrade RUST Validator Node](#7-upgrade-rust-validator-node)
-- [Stopping, restarting and deleting the RUST Node](#stopping-restarting-and-deleting-the-rust-node)
+- [Stopping, restarting and deleting the RUST Node](#stopping-restarting-the-rust-node)
 - [Logging](#logging)
   - [During deployment](#during-deployment)
   - [During operation](#during-operation)
@@ -169,7 +169,7 @@ Wait until the node is synced.
 
 
 
-# Stopping, restarting and deleting the RUST Node
+# Stopping, restarting the RUST Node
 
 > **Note**: call docker-compose commands from the `rustnet.ton.dev/docker-compose/ton-node`  folder.
 
