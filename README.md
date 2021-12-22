@@ -2,8 +2,6 @@
 
 This HOWTO contains instructions on how to build and configure a RUST validator node in TON blockchain. The instructions and scripts below were verified on Ubuntu 20.04.
 
-> **Note**: For RustCup, [update](#updating-the-node) your node to the latest version.
-
 # Table of Contents
 - [Getting Started](#getting-started)
   - [1. System Requirements](#1-system-requirements)
@@ -77,7 +75,7 @@ Use the following command to check if the node is synced:
 Script output example:
 ```
 tonlabs console 0.1.0
-COMMIT_ID: 0569a2bbb18c1ce966b1ac21cdf193dbd3c5817b
+COMMIT_ID: <commit_id>
 BUILD_DATE: 2021-01-15 19:11:52 +0000
 COMMIT_DATE: 2021-01-15 16:26:58 +0300
 GIT_BRANCH: master
