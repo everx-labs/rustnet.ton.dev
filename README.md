@@ -24,9 +24,7 @@ This HOWTO contains instructions on how to build and configure a RUST validator 
   - [2. thread 'main' panicked error when checking node synchronization](#2-thread-main-panicked-error-when-checking-node-synchronization)
   - [3. Error executing command when checking node synchronization](#3-error-executing-command-when-checking-node-synchronization)
   - [4. Cannot stop/restart/remove node container](#4-cannot-stoprestartremove-node-container)
-  - [5. Errors on repeated node deployment](#5-errors-on-repeated-node-deployment)
-  - [6. Database overflow](#6-database-overflow)
-  - [7. DePool state not updating](#7-depool-state-not-updating)
+  - [5. DePool state not updating](#7-depool-state-not-updating)
 
 # Getting Started
 
@@ -165,24 +163,6 @@ To restart a stopped node use the following command:
 
     docker-compose restart
 
-To delete the node use the following commands:
-
-    docker-compose down
-    git reset --hard origin/main
-    git clean -ffdx
-
-> **Warning**: all local files and changes will be deleted from the git tree.
-
-
-# Updating the node
-
-To update the node, first delete it:
-
-    docker-compose down
-    git reset --hard origin/main
-    git clean -ffdx
-
-Then repeat steps 1-6 of this document. This will install the latest version of the node.
 
 # Logging
 ## During deployment
@@ -364,36 +344,7 @@ Currently this is expected behavior, unless it persists **for more than one hour
 Make sure you are running all docker-compose commands from the `rustnet.ton.dev/docker-compose/ton-node` folder.
 
 
-## 5. Errors on repeated node deployment
-
-Various errors are possible if node deployment is repeated without previously removing the node container and resetting the git branch.
-
-To remove the node container run the following command from the `rustnet.ton.dev/docker-compose/ton-node` folder:
-
-    docker-compose down
-
-and reset the git branch:
-
-    git reset --hard origin/main
-    git clean -ffdx
-
-This will remove all local files and changes. Only then may node [deployment](#21-set-the-environment) be repeated.
-
-## 6. Database overflow
-It's recommended to use SSD disks of at least 1 TB for the database.
-If the database fills up the whole disk anyway, you can delete it, and resync the node:
-
-1. Stop the Rust node and clean docker volumes:
-
-       docker-compose down -v
-
-2. Then start the rust node again:
-
-       docker-compose up -d
-
-This will start the node with the same configs but with a clean database.
-
-## 7. DePool state not updating
+## 5. DePool state not updating
 
 It's recommended to send at least two [ticktocks](https://github.com/tonlabs/ton-labs-contracts/tree/master/solidity/depool#7-configure-depool-state-update-method) while the elections are open.
 For rust node you can use the [provided](https://github.com/tonlabs/rustnet.ton.dev/blob/main/docker-compose/ton-node/scripts/send_depool_tick_tock.sh) ticktock script, which sends 5 ticktocks after the elections open.
