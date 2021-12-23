@@ -29,7 +29,7 @@ This HOWTO contains instructions on how to build and configure a RUST validator 
 ## 1. System Requirements
 | Configuration | CPU (threads) | RAM (GiB) | Storage (GiB) | Network (Gbit/s)|
 |---|:---|:---|:---|:---|
-| Minimum |48|64|1000|1| 
+| Minimum |48|128|1000|1| 
 
 SSD/NVMe disks are obligatory.
 
