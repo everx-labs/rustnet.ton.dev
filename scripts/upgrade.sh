@@ -18,6 +18,10 @@ rm -rf "${DOCKER_COMPOSE_DIR}/ton-node/build/tonos-cli"
 cd "${DOCKER_COMPOSE_DIR}/ton-node/build" && git clone --recursive "${TONOS_CLI_GITHUB_REPO}"
 cd "${DOCKER_COMPOSE_DIR}/ton-node/build/tonos-cli" && git checkout "${TONOS_CLI_GITHUB_COMMIT_ID}"
 
+NODE_MEM_LIMIT_DYNAMIC="$((($(grep MemTotal /proc/meminfo | awk '{print $2}') / 1000 / 1000 - 1)))G"
+NODE_MEM_LIMIT="${NODE_MEM_LIMIT:-${NODE_MEM_LIMIT_DYNAMIC}}"
+sed -i "s|MEM_LIMIT=.*|MEM_LIMIT=${NODE_MEM_LIMIT}|g" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
+
 cd "${DOCKER_COMPOSE_DIR}/ton-node/" && docker-compose build --no-cache
 cd "${DOCKER_COMPOSE_DIR}/ton-node/" && docker-compose down
 cd "${DOCKER_COMPOSE_DIR}/ton-node/" && docker-compose up -d

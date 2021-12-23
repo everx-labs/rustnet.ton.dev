@@ -55,6 +55,10 @@ else
     sed -i "s|NODE_CMD_2=.*|NODE_CMD_2=novalidate|" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
 fi
 
+NODE_MEM_LIMIT_DYNAMIC="$((($(grep MemTotal /proc/meminfo | awk '{print $2}') / 1000 / 1000 - 1)))G"
+NODE_MEM_LIMIT="${NODE_MEM_LIMIT:-${NODE_MEM_LIMIT_DYNAMIC}}"
+sed -i "s|MEM_LIMIT=.*|MEM_LIMIT=${NODE_MEM_LIMIT}|g" "${DOCKER_COMPOSE_DIR}/ton-node/.env"
+
 cd "${DOCKER_COMPOSE_DIR}/ton-node/" && docker-compose build --no-cache
 cd "${DOCKER_COMPOSE_DIR}/ton-node/" && docker-compose up -d
 docker ps -a
