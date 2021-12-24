@@ -164,6 +164,8 @@ Once the validator wallet and the DePool are deployed, place 3 files on the vali
 The script generating validator election requests (directly through multisig wallet, or through DePool, depending on the setting selected on step 2.1) will run regularly, once the necessary addresses and keys are provided.
 
 ## 7. Upgrade RUST Validator Node
+**Note**: You may need to renew your copy of rustnet.ton.dev scripts but do not remove any working files from the previous deployment (for example, configs folder).
+
 Adjust (specify new commit ID) `rustnet.ton.dev/scripts/env.sh`:
 ```bash
 export TON_NODE_GITHUB_REPO="https://github.com/tonlabs/ton-labs-node.git"
