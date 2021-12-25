@@ -22,5 +22,6 @@ export TON_NODE_TOOLS_GITHUB_COMMIT_ID="183bb2a777db5c1e3186d26904dfcc3d8bb9a1b5
 export TONOS_CLI_GITHUB_REPO="https://github.com/tonlabs/tonos-cli.git"
 export TONOS_CLI_GITHUB_COMMIT_ID="master"
 export DEPOOL_ENABLE="no"
+export ADNL_PORT="30310"
 # Calculated dynamically (total RAM - 1GB), uncomment if you want to agjust it manually
 #export NODE_MEM_LIMIT="127G"
